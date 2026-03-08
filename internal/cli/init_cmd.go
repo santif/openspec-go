@@ -8,7 +8,11 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
+	"github.com/santif/openspec-go/internal/core/commandgen"
+	_ "github.com/santif/openspec-go/internal/core/commandgen/adapters" // register adapters
 	"github.com/santif/openspec-go/internal/core/config"
+	"github.com/santif/openspec-go/internal/core/globalconfig"
+	"github.com/santif/openspec-go/internal/core/profiles"
 	"github.com/santif/openspec-go/internal/utils"
 )
 
@@ -75,13 +79,22 @@ func runInit(cmd *cobra.Command, args []string) error {
 	selectedTools := resolveTools(toolsFlag)
 
 	// Generate tool-specific files (skills/commands)
+	gcfg := globalconfig.GetGlobalConfig()
+	workflows := profiles.GetProfileWorkflows(gcfg.Profile, gcfg.Workflows)
 	for _, tool := range selectedTools {
 		if tool.SkillsDir == "" {
 			continue
 		}
-		skillsDir := filepath.Join(resolvedPath, tool.SkillsDir)
-		if err := utils.EnsureDir(skillsDir); err != nil {
+		files, err := commandgen.GenerateForTool(tool.Value, workflows, gcfg.Delivery)
+		if err != nil {
 			continue
+		}
+		for _, f := range files {
+			dir := filepath.Join(resolvedPath, f.Dir)
+			if err := utils.EnsureDir(dir); err != nil {
+				continue
+			}
+			_ = utils.WriteFile(filepath.Join(dir, f.FileName), f.Content)
 		}
 	}
 
