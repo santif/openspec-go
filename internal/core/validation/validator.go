@@ -7,9 +7,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Fission-AI/openspec-go/internal/core/parsers"
-	"github.com/Fission-AI/openspec-go/internal/core/schemas"
-	"github.com/Fission-AI/openspec-go/internal/utils"
+	"github.com/santif/openspec-go/internal/core/parsers"
+	"github.com/santif/openspec-go/internal/core/schemas"
+	"github.com/santif/openspec-go/internal/utils"
 )
 
 type Validator struct {

@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/Fission-AI/openspec-go/internal/core/artifactgraph"
-	"github.com/Fission-AI/openspec-go/internal/core/projectconfig"
+	"github.com/santif/openspec-go/internal/core/artifactgraph"
+	"github.com/santif/openspec-go/internal/core/projectconfig"
 )
 
 func init() {

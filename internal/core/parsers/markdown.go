@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Fission-AI/openspec-go/internal/core/schemas"
+	"github.com/santif/openspec-go/internal/core/schemas"
 )
 
 type Section struct {

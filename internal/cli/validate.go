@@ -10,9 +10,9 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
-	"github.com/Fission-AI/openspec-go/internal/core/config"
-	"github.com/Fission-AI/openspec-go/internal/core/validation"
-	"github.com/Fission-AI/openspec-go/internal/utils"
+	"github.com/santif/openspec-go/internal/core/config"
+	"github.com/santif/openspec-go/internal/core/validation"
+	"github.com/santif/openspec-go/internal/utils"
 )
 
 func init() {

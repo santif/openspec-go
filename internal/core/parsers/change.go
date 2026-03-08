@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Fission-AI/openspec-go/internal/core/schemas"
+	"github.com/santif/openspec-go/internal/core/schemas"
 )
 
 func ParseChangeWithDeltas(name, content, changeDir string) (*schemas.Change, error) {

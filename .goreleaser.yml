@@ -5,7 +5,7 @@ builds:
     binary: openspec
     ldflags:
       - -s -w
-      - -X github.com/Fission-AI/openspec-go/internal/cli.version={{.Version}}
+      - -X github.com/santif/openspec-go/internal/cli.version={{.Version}}
     goos:
       - linux
       - darwin

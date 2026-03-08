@@ -18,7 +18,7 @@ go test ./internal/core/validation/...   # Run tests for a single package
 go test -run TestName ./internal/...     # Run a specific test
 ```
 
-The binary version is injected via ldflags: `-X github.com/Fission-AI/openspec-go/internal/cli.version=VERSION`
+The binary version is injected via ldflags: `-X github.com/santif/openspec-go/internal/cli.version=VERSION`
 
 ## Architecture
 
@@ -75,6 +75,6 @@ The binary version is injected via ldflags: `-X github.com/Fission-AI/openspec-g
 - **No tests exist yet** — the project has no `_test.go` files
 - All CLI commands use `init()` for registration with Cobra, not a central command tree
 - Batch validation runs concurrently with goroutines + sync.Mutex
-- Module path is `github.com/Fission-AI/openspec-go` (migration to `github.com/santif/openspec-go` is planned per PLAN.md)
+- Module path is `github.com/santif/openspec-go`
 - Project data lives in `openspec/` directory within the user's project (changes in `openspec/changes/<name>/`, specs in `openspec/specs/<name>/`)
 - GoReleaser handles cross-platform builds (linux/darwin/windows, amd64/arm64)

@@ -1,6 +1,6 @@
 package profiles
 
-import "github.com/Fission-AI/openspec-go/internal/core/globalconfig"
+import "github.com/santif/openspec-go/internal/core/globalconfig"
 
 // CoreWorkflows are the minimal set of workflows available in the "core" profile.
 var CoreWorkflows = []string{"propose", "explore", "apply", "archive"}

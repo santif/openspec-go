@@ -8,10 +8,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	coreconfig "github.com/Fission-AI/openspec-go/internal/core/config"
-	"github.com/Fission-AI/openspec-go/internal/core/artifactgraph"
-	"github.com/Fission-AI/openspec-go/internal/core/projectconfig"
-	"github.com/Fission-AI/openspec-go/internal/utils"
+	coreconfig "github.com/santif/openspec-go/internal/core/config"
+	"github.com/santif/openspec-go/internal/core/artifactgraph"
+	"github.com/santif/openspec-go/internal/core/projectconfig"
+	"github.com/santif/openspec-go/internal/utils"
 )
 
 func init() {

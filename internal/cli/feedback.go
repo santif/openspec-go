@@ -30,7 +30,7 @@ func runFeedback(cmd *cobra.Command, args []string) error {
 
 	ghArgs := []string{
 		"issue", "create",
-		"--repo", "Fission-AI/OpenSpec",
+		"--repo", "santif/openspec-go",
 		"--title", message,
 	}
 

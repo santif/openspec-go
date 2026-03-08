@@ -8,9 +8,9 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
-	coreconfig "github.com/Fission-AI/openspec-go/internal/core/config"
-	"github.com/Fission-AI/openspec-go/internal/core/validation"
-	"github.com/Fission-AI/openspec-go/internal/utils"
+	coreconfig "github.com/santif/openspec-go/internal/core/config"
+	"github.com/santif/openspec-go/internal/core/validation"
+	"github.com/santif/openspec-go/internal/utils"
 )
 
 func init() {

@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/Fission-AI/openspec-go/internal/core/globalconfig"
+	"github.com/santif/openspec-go/internal/core/globalconfig"
 )
 
 func init() {

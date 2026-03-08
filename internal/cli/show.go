@@ -8,9 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/Fission-AI/openspec-go/internal/core/config"
-	"github.com/Fission-AI/openspec-go/internal/core/parsers"
-	"github.com/Fission-AI/openspec-go/internal/utils"
+	"github.com/santif/openspec-go/internal/core/config"
+	"github.com/santif/openspec-go/internal/core/parsers"
+	"github.com/santif/openspec-go/internal/utils"
 )
 
 func init() {

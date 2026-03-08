@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	builtinSchemas "github.com/Fission-AI/openspec-go/schemas"
-	"github.com/Fission-AI/openspec-go/internal/core/globalconfig"
+	builtinSchemas "github.com/santif/openspec-go/schemas"
+	"github.com/santif/openspec-go/internal/core/globalconfig"
 )
 
 // SchemaSource describes where a schema was found.

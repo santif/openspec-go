@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/Fission-AI/openspec-go/internal/cli"
+	"github.com/santif/openspec-go/internal/cli"
 )
 
 func main() {
