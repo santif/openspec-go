@@ -24,7 +24,7 @@ The binary version is injected via ldflags: `-X github.com/santif/openspec-go/in
 
 ### Entry point & CLI layer
 - `cmd/openspec/main.go` — calls `cli.Execute()`
-- `internal/cli/` — Cobra commands. Each file registers its command in `init()` and adds it to `rootCmd`. Commands: `init`, `new change`, `list`, `show`, `validate`, `status`, `view`, `archive`, `update`, `instructions`, `config`, `schema`, `feedback`
+- `internal/cli/` — Cobra commands. Each file registers its command in `init()` and adds it to `rootCmd`. `deprecated.go` provides backward-compat aliases (`change show/list/validate`, `spec show/list/validate`). `show` supports `--json` and `--type` flags.
 - Version is set via the `version` var in `root.go` (ldflags)
 
 ### Core domain (`internal/core/`)
@@ -35,6 +35,7 @@ The binary version is injected via ldflags: `-X github.com/santif/openspec-go/in
 - `ParseChange()` expects `## Why` and `## What Changes` sections. Deltas parsed from bullet list: `- **SpecName:** description`
 - `change.go` — `ParseChangeWithDeltas()` extends ParseChange by also reading `specs/<name>/spec.md` delta files from the filesystem
 - `requirementblocks.go` — Parses delta spec files (ADDED/MODIFIED/REMOVED/RENAMED sections)
+- `requirementsection.go` — `ExtractRequirementsSection()` structurally separates the `## Requirements` section into ordered blocks for delta operations
 
 **Schema & artifact graph** (`artifactgraph/`):
 - Schemas are YAML files defining artifacts with dependency DAGs. Each artifact has `id`, `generates` (glob), `template`, `requires` (list of artifact IDs).
@@ -49,9 +50,30 @@ The binary version is injected via ldflags: `-X github.com/santif/openspec-go/in
 - `constants.go` — All validation messages and thresholds
 - `types.go` — `Report{Valid, Issues, Summary}`, `Issue{Level, Path, Message}`
 
+**Command generation** (`commandgen/`):
+- Adapter-based system that generates skill/command markdown files for multiple AI tools. `generator.go` dispatches to per-tool adapters via `ToolCommandAdapter` interface (defined in `types.go`). `registry.go` maps tool IDs to adapters (specialized ones for Claude, Cursor, Codex, Cline, OpenCode, Factory, Windsurf + generic adapter for the rest).
+- `skilltemplates.go` / `transforms.go` — Template rendering and content transforms
+- `embed.go` — `//go:embed` for skill/command markdown templates
+- `yaml.go` — YAML frontmatter generation for tool-specific formats
+
+**Spec application** (`specsapply/`):
+- Applies delta operations (ADDED/MODIFIED/REMOVED/RENAMED) from change delta specs to main specs with atomic validation-then-write. `ApplySpecs()` orchestrates, `BuildUpdatedSpec()` applies per-spec.
+
+**Legacy cleanup** (`legacycleanup/`):
+- Detects and removes old slash-command directories and OpenSpec marker blocks from config files during upgrades.
+
+**Migration** (`migration/`):
+- One-time profile migration — scans installed workflows and sets up global config profile/delivery mode. `MigrateIfNeeded()` is the entry point.
+
+**Profile drift** (`profiledrift/`):
+- Detects when on-disk skill/command artifacts drift from desired workflow configuration, signaling need for `openspec update`.
+
+**Converters** (`converters/`):
+- `ConvertSpecToJSON()` / `ConvertChangeToJSON()` — markdown-to-JSON conversion for `show --json`.
+
 **Other core packages**:
 - `schemas/types.go` — Domain types: `Spec`, `Change`, `Delta`, `Requirement`, `Scenario`, `DeltaOperation` (ADDED/MODIFIED/REMOVED/RENAMED)
-- `config/config.go` — Constants (`OpenSpecDirName = "openspec"`, `OpenSpecMarkers`) and AI tool definitions (24 tools with skill directory mappings)
+- `config/config.go` — Constants (`OpenSpecDirName = "openspec"`, `OpenSpecMarkers`), AI tool definitions (with skill directory mappings), and `WorkflowToSkillDir` map (workflow→skill-dir mappings)
 - `globalconfig/` — XDG-compliant global config (`~/.config/openspec/config.json`): profiles (core/custom), delivery mode, feature flags
 - `projectconfig/` — Per-project `openspec/config.yaml`: schema, profile, workflows, context, rules (mapped to artifact IDs)
 - `profiles/` — Workflow profiles: core workflows (`propose`, `explore`, `apply`, `archive`) and all workflows
@@ -70,9 +92,12 @@ The binary version is injected via ldflags: `-X github.com/santif/openspec-go/in
 - `spec-driven/schema.yaml` — Default schema defining artifacts: proposal, spec, design, tasks
 - `spec-driven/templates/` — Markdown templates for each artifact
 
+### Embedded command templates (`commandgen/templates/`)
+- Embedded markdown templates for skill and command files (one per workflow, in `skills/` and `commands/` subdirectories)
+
 ## Key Patterns
 
-- **No tests exist yet** — the project has no `_test.go` files
+- Tests cover most core packages and utils. Run `make test` or target specific packages.
 - All CLI commands use `init()` for registration with Cobra, not a central command tree
 - Batch validation runs concurrently with goroutines + sync.Mutex
 - Module path is `github.com/santif/openspec-go`
