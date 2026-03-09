@@ -45,3 +45,18 @@ var AITools = []AIToolOption{
 	{Name: "Windsurf", Value: "windsurf", Available: true, SuccessLabel: "Windsurf", SkillsDir: ".windsurf"},
 	{Name: "AGENTS.md (works with Amp, VS Code, ...)", Value: "agents", Available: false, SuccessLabel: "your AGENTS.md-compatible assistant", SkillsDir: ""},
 }
+
+// WorkflowToSkillDir maps workflow IDs to their skill directory names.
+var WorkflowToSkillDir = map[string]string{
+	"explore":      "openspec-explore",
+	"new":          "openspec-new-change",
+	"continue":     "openspec-continue-change",
+	"apply":        "openspec-apply-change",
+	"ff":           "openspec-ff-change",
+	"sync":         "openspec-sync-specs",
+	"archive":      "openspec-archive-change",
+	"bulk-archive": "openspec-bulk-archive-change",
+	"verify":       "openspec-verify-change",
+	"onboard":      "openspec-onboard",
+	"propose":      "openspec-propose",
+}

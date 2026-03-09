@@ -7,7 +7,7 @@ import (
 )
 
 // GenerateForTool generates skill and/or command files for the given tool.
-func GenerateForTool(toolID string, workflows []string, delivery globalconfig.Delivery) ([]CommandContent, error) {
+func GenerateForTool(toolID string, workflows []string, delivery globalconfig.Delivery, version string) ([]CommandContent, error) {
 	adapter := Get(toolID)
 	if adapter == nil {
 		return nil, fmt.Errorf("no adapter registered for tool %q", toolID)
@@ -17,11 +17,11 @@ func GenerateForTool(toolID string, workflows []string, delivery globalconfig.De
 
 	switch delivery {
 	case globalconfig.DeliverySkills:
-		results = append(results, adapter.GenerateSkills(workflows)...)
+		results = append(results, adapter.GenerateSkills(workflows, version)...)
 	case globalconfig.DeliveryCommands:
 		results = append(results, adapter.GenerateCommands(workflows)...)
 	default: // DeliveryBoth
-		results = append(results, adapter.GenerateSkills(workflows)...)
+		results = append(results, adapter.GenerateSkills(workflows, version)...)
 		results = append(results, adapter.GenerateCommands(workflows)...)
 	}
 

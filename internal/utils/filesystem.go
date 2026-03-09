@@ -80,6 +80,55 @@ func UpdateFileWithMarkers(filePath, content, startMarker, endMarker string) err
 	return WriteFile(filePath, existingContent)
 }
 
+// RemoveMarkerBlock removes a marker block (start marker through end marker,
+// inclusive of the lines they appear on) from content. Returns the original
+// content unchanged if markers are not found or invalid.
+func RemoveMarkerBlock(content, startMarker, endMarker string) string {
+	startIndex := findMarkerIndex(content, startMarker, 0)
+	endIndex := -1
+	if startIndex != -1 {
+		endIndex = findMarkerIndex(content, endMarker, startIndex+len(startMarker))
+	} else {
+		endIndex = findMarkerIndex(content, endMarker, 0)
+	}
+
+	if startIndex == -1 || endIndex == -1 || endIndex <= startIndex {
+		return content
+	}
+
+	// Find the start of the line containing the start marker
+	lineStart := startIndex
+	for lineStart > 0 && content[lineStart-1] != '\n' {
+		lineStart--
+	}
+
+	// Find the end of the line containing the end marker
+	lineEnd := endIndex + len(endMarker)
+	for lineEnd < len(content) && content[lineEnd] != '\n' {
+		lineEnd++
+	}
+	// Include the trailing newline if present
+	if lineEnd < len(content) && content[lineEnd] == '\n' {
+		lineEnd++
+	}
+
+	before := content[:lineStart]
+	after := content[lineEnd:]
+
+	result := before + after
+
+	// Clean up triple+ blank lines
+	for strings.Contains(result, "\n\n\n") {
+		result = strings.ReplaceAll(result, "\n\n\n", "\n\n")
+	}
+
+	trimmed := strings.TrimRight(result, " \t\n\r")
+	if trimmed == "" {
+		return ""
+	}
+	return trimmed + "\n"
+}
+
 func findMarkerIndex(content, marker string, fromIndex int) int {
 	if fromIndex >= len(content) {
 		return -1

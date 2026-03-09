@@ -30,7 +30,7 @@ func NormalizeRequirementName(name string) string {
 	return strings.TrimSpace(name)
 }
 
-var requirementHeaderRegex = regexp.MustCompile(`^###\s*Requirement:\s*(.+)\s*$`)
+var RequirementHeaderRegex = regexp.MustCompile(`^###\s*Requirement:\s*(.+)\s*$`)
 
 func ParseDeltaSpec(content string) DeltaPlan {
 	normalized := NormalizeContent(content)
@@ -119,7 +119,7 @@ func parseRequirementBlocksFromSection(sectionBody string) []RequirementBlock {
 
 	for i < len(lines) {
 		// Seek next requirement header
-		for i < len(lines) && !requirementHeaderRegex.MatchString(lines[i]) {
+		for i < len(lines) && !RequirementHeaderRegex.MatchString(lines[i]) {
 			i++
 		}
 		if i >= len(lines) {
@@ -127,7 +127,7 @@ func parseRequirementBlocksFromSection(sectionBody string) []RequirementBlock {
 		}
 
 		headerLine := lines[i]
-		m := requirementHeaderRegex.FindStringSubmatch(headerLine)
+		m := RequirementHeaderRegex.FindStringSubmatch(headerLine)
 		if m == nil {
 			i++
 			continue
@@ -137,7 +137,7 @@ func parseRequirementBlocksFromSection(sectionBody string) []RequirementBlock {
 		i++
 
 		h2Re := regexp.MustCompile(`^##\s+`)
-		for i < len(lines) && !requirementHeaderRegex.MatchString(lines[i]) {
+		for i < len(lines) && !RequirementHeaderRegex.MatchString(lines[i]) {
 			// Also stop at ## level headers (but not ### headers)
 			if h2Re.MatchString(lines[i]) {
 				break
@@ -166,7 +166,7 @@ func parseRemovedNames(sectionBody string) []string {
 	bulletRe := regexp.MustCompile("^\\s*-\\s*`?###\\s*Requirement:\\s*(.+?)`?\\s*$")
 
 	for _, line := range lines {
-		if m := requirementHeaderRegex.FindStringSubmatch(line); m != nil {
+		if m := RequirementHeaderRegex.FindStringSubmatch(line); m != nil {
 			names = append(names, NormalizeRequirementName(m[1]))
 			continue
 		}

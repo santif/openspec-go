@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	coreconfig "github.com/santif/openspec-go/internal/core/config"
+	"github.com/santif/openspec-go/internal/core/specsapply"
 	"github.com/santif/openspec-go/internal/core/validation"
 	"github.com/santif/openspec-go/internal/utils"
 )
@@ -19,6 +21,12 @@ func init() {
 		Short: "Archive a completed change and update main specs",
 		Args:  cobra.MaximumNArgs(1),
 		RunE:  runArchive,
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			return utils.GetActiveChangeIDs("."), cobra.ShellCompDirectiveNoFileComp
+		},
 	}
 	archiveCmd.Flags().BoolP("yes", "y", false, "Skip confirmation prompts")
 	archiveCmd.Flags().Bool("skip-specs", false, "Skip spec update operations")
@@ -28,6 +36,7 @@ func init() {
 
 func runArchive(cmd *cobra.Command, args []string) error {
 	yes, _ := cmd.Flags().GetBool("yes")
+	skipSpecs, _ := cmd.Flags().GetBool("skip-specs")
 	noValidate, _ := cmd.Flags().GetBool("no-validate")
 
 	projectRoot := "."
@@ -75,8 +84,24 @@ func runArchive(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// TODO: Apply delta specs to main specs (specs-apply logic)
-	// This is the most complex part of the system and will be implemented separately
+	// Apply delta specs to main specs
+	if !skipSpecs {
+		result, err := specsapply.ApplySpecs(projectRoot, changeName, specsapply.ApplyOptions{
+			SkipValidation: noValidate,
+		})
+		if err != nil {
+			fmt.Println()
+			color.New(color.FgRed).Printf("  Spec application failed: %s\n", err)
+			fmt.Println("  Aborted. No files were changed.")
+			fmt.Println()
+			return fmt.Errorf("spec application failed: %w", err)
+		}
+		if !result.NoChanges {
+			fmt.Println()
+			total := result.Totals.Added + result.Totals.Modified + result.Totals.Removed + result.Totals.Renamed
+			color.New(color.FgGreen).Printf("  Applied %d spec update(s)\n", total)
+		}
+	}
 
 	// Move change to archive
 	archiveDir := filepath.Join(openspecDir, "archive")
@@ -84,7 +109,8 @@ func runArchive(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create archive directory: %w", err)
 	}
 
-	archiveDest := filepath.Join(archiveDir, changeName)
+	date := time.Now().Format("2006-01-02")
+	archiveDest := filepath.Join(archiveDir, date+"-"+changeName)
 	if utils.DirectoryExists(archiveDest) {
 		return fmt.Errorf("archive already contains %q", changeName)
 	}

@@ -2,157 +2,137 @@ package commandgen
 
 import "fmt"
 
-// SkillTemplate returns the markdown content for a given workflow skill.
-func SkillTemplate(workflow string) string {
-	switch workflow {
-	case "propose":
-		return proposeSkill
-	case "explore":
-		return exploreSkill
-	case "apply":
-		return applySkill
-	case "archive":
-		return archiveSkill
-	case "new":
-		return newSkill
-	case "continue":
-		return continueSkill
-	case "ff":
-		return ffSkill
-	case "sync":
-		return syncSkill
-	case "bulk-archive":
-		return bulkArchiveSkill
-	case "verify":
-		return verifySkill
-	case "onboard":
-		return onboardSkill
-	default:
-		return fmt.Sprintf("# %s\n\nRun `openspec instructions %s` for details.\n", workflow, workflow)
+// skillMetadata maps workflow IDs to their skill metadata.
+var skillMetadata = map[string]struct {
+	Name        string
+	Description string
+}{
+	"propose":      {"openspec-propose", "Propose a new change with all artifacts generated in one step. Use when the user wants to quickly describe what they want to build and get a complete proposal with design, specs, and tasks ready for implementation."},
+	"explore":      {"openspec-explore", "Enter explore mode - a thinking partner for exploring ideas, investigating problems, and clarifying requirements. Use when the user wants to think through something before or during a change."},
+	"apply":        {"openspec-apply-change", "Implement tasks from an OpenSpec change. Use when the user wants to start implementing, continue implementation, or work through tasks."},
+	"archive":      {"openspec-archive-change", "Archive a completed change in the experimental workflow. Use when the user wants to finalize and archive a change after implementation is complete."},
+	"new":          {"openspec-new-change", "Start a new OpenSpec change using the experimental artifact workflow. Use when the user wants to create a new feature, fix, or modification with a structured step-by-step approach."},
+	"continue":     {"openspec-continue-change", "Continue working on an OpenSpec change by creating the next artifact. Use when the user wants to progress their change, create the next artifact, or continue their workflow."},
+	"ff":           {"openspec-ff-change", "Fast-forward through OpenSpec artifact creation. Use when the user wants to quickly create all artifacts needed for implementation without stepping through each one individually."},
+	"sync":         {"openspec-sync-specs", "Sync delta specs from a change to main specs. Use when the user wants to update main specs with changes from a delta spec, without archiving the change."},
+	"bulk-archive": {"openspec-bulk-archive-change", "Archive multiple completed changes at once. Use when archiving several parallel changes."},
+	"verify":       {"openspec-verify-change", "Verify implementation matches change artifacts. Use when the user wants to validate that implementation is complete, correct, and coherent before archiving."},
+	"onboard":      {"openspec-onboard", "Guided onboarding for OpenSpec - walk through a complete workflow cycle with narration and real codebase work."},
+}
+
+// commandMetadata maps workflow IDs to their command metadata.
+var commandMetadata = map[string]struct {
+	ID          string
+	Name        string
+	Description string
+	Category    string
+	Tags        []string
+}{
+	"propose":      {"propose", "OPSX: Propose", "Propose a new change - create it and generate all artifacts in one step", "Workflow", []string{"workflow", "artifacts", "experimental"}},
+	"explore":      {"explore", "OPSX: Explore", "Enter explore mode - think through ideas, investigate problems, clarify requirements", "Workflow", []string{"workflow", "explore", "experimental", "thinking"}},
+	"apply":        {"apply", "OPSX: Apply", "Implement tasks from an OpenSpec change (Experimental)", "Workflow", []string{"workflow", "artifacts", "experimental"}},
+	"archive":      {"archive", "OPSX: Archive", "Archive a completed change in the experimental workflow", "Workflow", []string{"workflow", "archive", "experimental"}},
+	"new":          {"new", "OPSX: New", "Start a new change using the experimental artifact workflow (OPSX)", "Workflow", []string{"workflow", "artifacts", "experimental"}},
+	"continue":     {"continue", "OPSX: Continue", "Continue working on a change - create the next artifact (Experimental)", "Workflow", []string{"workflow", "artifacts", "experimental"}},
+	"ff":           {"ff", "OPSX: Fast Forward", "Create a change and generate all artifacts needed for implementation in one go", "Workflow", []string{"workflow", "artifacts", "experimental"}},
+	"sync":         {"sync", "OPSX: Sync", "Sync delta specs from a change to main specs", "Workflow", []string{"workflow", "specs", "experimental"}},
+	"bulk-archive": {"bulk-archive", "OPSX: Bulk Archive", "Archive multiple completed changes at once", "Workflow", []string{"workflow", "archive", "experimental", "bulk"}},
+	"verify":       {"verify", "OPSX: Verify", "Verify implementation matches change artifacts before archiving", "Workflow", []string{"workflow", "verify", "experimental"}},
+	"onboard":      {"onboard", "OPSX: Onboard", "Guided onboarding - walk through a complete OpenSpec workflow cycle with narration", "Workflow", []string{"workflow", "onboarding", "tutorial", "learning"}},
+}
+
+// SkillTemplate returns the full skill template data for a given workflow.
+func SkillTemplate(workflow string) SkillTemplateData {
+	meta, ok := skillMetadata[workflow]
+	if !ok {
+		return SkillTemplateData{
+			Name:         fmt.Sprintf("openspec-%s", workflow),
+			Description:  fmt.Sprintf("OpenSpec %s workflow", workflow),
+			Instructions: fmt.Sprintf("# %s\n\nRun `openspec instructions %s` for details.\n", workflow, workflow),
+		}
+	}
+
+	instructions := loadSkillContent(workflow)
+	if instructions == "" {
+		instructions = fmt.Sprintf("# %s\n\nRun `openspec instructions %s` for details.\n", workflow, workflow)
+	}
+
+	return SkillTemplateData{
+		Name:          meta.Name,
+		Description:   meta.Description,
+		Instructions:  instructions,
+		License:       "MIT",
+		Compatibility: "Requires openspec CLI.",
+		Author:        "openspec",
+		Version:       "1.0",
 	}
 }
 
-const proposeSkill = `# Propose a Change
+// CommandTemplate returns the full command template data for a given workflow.
+func CommandTemplate(workflow string) CommandTemplateData {
+	meta, ok := commandMetadata[workflow]
+	if !ok {
+		return CommandTemplateData{
+			ID:          workflow,
+			Name:        fmt.Sprintf("OPSX: %s", workflow),
+			Description: fmt.Sprintf("OpenSpec %s workflow", workflow),
+			Body:        fmt.Sprintf("# %s\n\nRun `openspec instructions %s` for details.\n", workflow, workflow),
+		}
+	}
 
-Create a new OpenSpec change proposal.
+	body := loadCommandContent(workflow)
+	if body == "" {
+		body = fmt.Sprintf("# %s\n\nRun `openspec instructions %s` for details.\n", workflow, workflow)
+	}
 
-## Steps
+	return CommandTemplateData{
+		ID:          meta.ID,
+		Name:        meta.Name,
+		Description: meta.Description,
+		Category:    meta.Category,
+		Tags:        meta.Tags,
+		Body:        body,
+	}
+}
 
-1. Run ` + "`openspec new change <name>`" + ` to scaffold the change directory
-2. Run ` + "`openspec instructions proposal --change <name>`" + ` to get enriched instructions
-3. Follow the instructions to write the proposal document
-4. Run ` + "`openspec validate --change <name>`" + ` to verify the proposal
-`
+// GenerateSkillContent produces a complete skill file with YAML frontmatter.
+func GenerateSkillContent(tmpl SkillTemplateData, cliVersion string) string {
+	license := tmpl.License
+	if license == "" {
+		license = "MIT"
+	}
+	compatibility := tmpl.Compatibility
+	if compatibility == "" {
+		compatibility = "Requires openspec CLI."
+	}
+	author := tmpl.Author
+	if author == "" {
+		author = "openspec"
+	}
+	templateVersion := tmpl.Version
+	if templateVersion == "" {
+		templateVersion = "1.0"
+	}
 
-const exploreSkill = `# Explore
+	return fmt.Sprintf(`---
+name: %s
+description: %s
+license: %s
+compatibility: %s
+metadata:
+  author: %s
+  version: "%s"
+  generatedBy: "%s"
+---
 
-Enter explore mode to think through ideas, investigate problems, and clarify requirements.
-
-## Steps
-
-1. Review the current specs with ` + "`openspec list specs`" + `
-2. Use ` + "`openspec show <spec>`" + ` to examine existing specs
-3. Use ` + "`openspec status`" + ` to understand the current state of changes
-4. Discuss and refine requirements before creating a formal change
-`
-
-const applySkill = `# Apply a Change
-
-Implement the tasks defined in a change.
-
-## Steps
-
-1. Run ` + "`openspec instructions apply --change <name>`" + ` to get implementation instructions
-2. Run ` + "`openspec status --change <name>`" + ` to see which artifacts are pending
-3. Implement the changes following the instructions
-4. Run ` + "`openspec validate --change <name>`" + ` to verify the implementation
-`
-
-const archiveSkill = `# Archive a Change
-
-Archive a completed change after implementation is verified.
-
-## Steps
-
-1. Run ` + "`openspec validate --change <name>`" + ` to ensure all artifacts pass
-2. Run ` + "`openspec status --change <name>`" + ` to confirm all artifacts are complete
-3. Run ` + "`openspec archive <name>`" + ` to archive the change
-`
-
-const newSkill = `# New Change
-
-Create a new change from scratch with all artifacts generated in one step.
-
-## Steps
-
-1. Run ` + "`openspec new change <name>`" + ` to create the change
-2. Fill in all required artifacts following the schema
-3. Run ` + "`openspec validate --change <name>`" + ` to verify
-`
-
-const continueSkill = `# Continue a Change
-
-Resume work on an existing change.
-
-## Steps
-
-1. Run ` + "`openspec status --change <name>`" + ` to see current progress
-2. Run ` + "`openspec instructions <next-artifact> --change <name>`" + ` for the next pending artifact
-3. Complete the artifact and validate
-`
-
-const ffSkill = `# Fast-Forward
-
-Fast-forward a change by generating remaining artifacts.
-
-## Steps
-
-1. Run ` + "`openspec status --change <name>`" + ` to identify incomplete artifacts
-2. Generate each remaining artifact using ` + "`openspec instructions <artifact> --change <name>`" + `
-3. Validate the complete change
-`
-
-const syncSkill = `# Sync
-
-Synchronize change artifacts with the latest spec state.
-
-## Steps
-
-1. Run ` + "`openspec list changes`" + ` to see active changes
-2. Review each change's status with ` + "`openspec status --change <name>`" + `
-3. Update artifacts as needed to match current specs
-`
-
-const bulkArchiveSkill = `# Bulk Archive
-
-Archive multiple completed changes at once.
-
-## Steps
-
-1. Run ` + "`openspec list changes`" + ` to see all changes
-2. Validate each change to confirm completeness
-3. Archive completed changes with ` + "`openspec archive <name>`" + `
-`
-
-const verifySkill = `# Verify
-
-Verify that a change's implementation matches its specification.
-
-## Steps
-
-1. Run ` + "`openspec status --change <name>`" + ` to check artifact completion
-2. Run ` + "`openspec validate --change <name>`" + ` to validate all artifacts
-3. Review any validation issues and fix them
-`
-
-const onboardSkill = `# Onboard
-
-Get familiar with the project's OpenSpec setup.
-
-## Steps
-
-1. Run ` + "`openspec list specs`" + ` to see all specifications
-2. Run ` + "`openspec list changes`" + ` to see active changes
-3. Run ` + "`openspec show <spec>`" + ` to read individual specs
-4. Run ` + "`openspec schema`" + ` to understand the artifact schema
-`
+%s`,
+		EscapeYamlValue(tmpl.Name),
+		EscapeYamlValue(tmpl.Description),
+		license,
+		EscapeYamlValue(compatibility),
+		author,
+		templateVersion,
+		cliVersion,
+		tmpl.Instructions,
+	)
+}

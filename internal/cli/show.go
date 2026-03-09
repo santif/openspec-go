@@ -19,6 +19,14 @@ func init() {
 		Short: "Show a change or spec",
 		Args:  cobra.MaximumNArgs(1),
 		RunE:  runShow,
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			ids := utils.GetActiveChangeIDs(".")
+			ids = append(ids, utils.GetSpecIDs(".")...)
+			return ids, cobra.ShellCompDirectiveNoFileComp
+		},
 	}
 	showCmd.Flags().Bool("json", false, "Output as JSON")
 	showCmd.Flags().String("type", "", "Specify item type when ambiguous: change|spec")

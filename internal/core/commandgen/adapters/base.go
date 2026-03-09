@@ -22,11 +22,12 @@ func (b *BaseAdapter) GetSkillsDir() string {
 	return b.SkillsDir
 }
 
-// GenerateSkills produces markdown skill files for each workflow.
-func (b *BaseAdapter) GenerateSkills(workflows []string) []commandgen.CommandContent {
+// GenerateSkills produces markdown skill files with YAML frontmatter for each workflow.
+func (b *BaseAdapter) GenerateSkills(workflows []string, version string) []commandgen.CommandContent {
 	var results []commandgen.CommandContent
 	for _, wf := range workflows {
-		content := commandgen.SkillTemplate(wf)
+		tmpl := commandgen.SkillTemplate(wf)
+		content := commandgen.GenerateSkillContent(tmpl, version)
 		results = append(results, commandgen.CommandContent{
 			FileName: fmt.Sprintf("openspec-%s.md", wf),
 			Content:  content,
@@ -37,16 +38,25 @@ func (b *BaseAdapter) GenerateSkills(workflows []string) []commandgen.CommandCon
 }
 
 // GenerateCommands produces command wrapper files for each workflow.
-// Most tools use the same skill files as commands, so this delegates to GenerateSkills.
+// The base adapter uses a simple frontmatter with description only.
 func (b *BaseAdapter) GenerateCommands(workflows []string) []commandgen.CommandContent {
 	var results []commandgen.CommandContent
 	for _, wf := range workflows {
-		content := commandgen.SkillTemplate(wf)
+		tmpl := commandgen.CommandTemplate(wf)
+		content := formatDefaultCommand(tmpl)
 		results = append(results, commandgen.CommandContent{
-			FileName: fmt.Sprintf("openspec-%s.md", wf),
+			FileName: fmt.Sprintf("opsx-%s.md", tmpl.ID),
 			Content:  content,
 			Dir:      filepath.Join(b.SkillsDir, "commands"),
 		})
 	}
 	return results
+}
+
+// formatDefaultCommand formats a command with a simple description-only frontmatter.
+func formatDefaultCommand(tmpl commandgen.CommandTemplateData) string {
+	return fmt.Sprintf("---\ndescription: %s\n---\n\n%s",
+		commandgen.EscapeYamlValue(tmpl.Description),
+		tmpl.Body,
+	)
 }

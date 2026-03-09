@@ -85,12 +85,15 @@ func runInit(cmd *cobra.Command, args []string) error {
 		if tool.SkillsDir == "" {
 			continue
 		}
-		files, err := commandgen.GenerateForTool(tool.Value, workflows, gcfg.Delivery)
+		files, err := commandgen.GenerateForTool(tool.Value, workflows, gcfg.Delivery, version)
 		if err != nil {
 			continue
 		}
 		for _, f := range files {
-			dir := filepath.Join(resolvedPath, f.Dir)
+			dir := f.Dir
+			if !filepath.IsAbs(dir) {
+				dir = filepath.Join(resolvedPath, dir)
+			}
 			if err := utils.EnsureDir(dir); err != nil {
 				continue
 			}
