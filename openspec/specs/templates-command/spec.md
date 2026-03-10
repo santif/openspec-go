@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+CLI command that displays resolved template file paths for all artifacts in the active or specified schema, with optional JSON output format.
+
+## Requirements
 
 ### Requirement: Template path display
 The system SHALL provide an `openspec templates` command that shows the resolved template file paths for all artifacts in the active schema. Each artifact's template path MUST be resolved through the schema resolution chain before display.

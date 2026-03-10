@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Instruction enrichment system that loads artifact templates from the active schema and injects project context, rules, change scoping, and artifact listing to produce ready-to-use AI instructions in text or JSON format.
+
+## Requirements
 
 ### Requirement: Instruction enrichment
 The system SHALL load an artifact's instruction text from the active schema and enrich it by injecting project context (from `openspec/config.yaml` context field) and artifact-specific rules (from the rules map keyed by artifact ID). The enriched instruction MUST be a single text output ready for AI consumption.

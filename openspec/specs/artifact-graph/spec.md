@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Dependency graph system that constructs a DAG from schema artifact definitions, providing topological ordering, blocked-artifact detection, completion state tracking, and next-ready identification to orchestrate artifact generation order.
+
+## Requirements
 
 ### Requirement: Graph construction from schema
 The system SHALL construct a directed acyclic graph (DAG) from a schema's artifact definitions, where each artifact is a node and each entry in its `requires` list creates an edge from the dependency to the dependent.

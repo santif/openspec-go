@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+XDG-compliant global configuration system that stores user preferences in `~/.config/openspec/config.json`, managing workflow profiles, delivery mode, feature flags, and providing CLI commands for inspection and modification.
+
+## Requirements
 
 ### Requirement: XDG-compliant storage
 The system SHALL store global configuration at the XDG-compliant path `~/.config/openspec/config.json` on Linux and macOS. On Windows, the system SHALL use the `%APPDATA%` directory. The system MUST create the directory if it does not exist.

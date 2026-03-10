@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Schema definition and resolution system that loads YAML-based artifact schemas with dependency validation, supports a three-tier resolution chain (user override, project-local, built-in embedded), and provides forking, listing, and inspection capabilities.
+
+## Requirements
 
 ### Requirement: Schema YAML structure
 The system SHALL define schemas as YAML files containing a name, version, description, and a list of artifacts. Each artifact SHALL have an id, description (text), generates (glob pattern), template (file path), instruction (text), and requires (list of artifact IDs). An optional apply phase MAY be defined with its own requires and tracks fields.

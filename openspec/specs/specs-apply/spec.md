@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Spec application engine that discovers delta spec files from a change, merges ADDED/MODIFIED/REMOVED/RENAMED operations into main specs with atomic validation-then-write, supports dry-run mode, and reports operation counts.
+
+## Requirements
 
 ### Requirement: Spec update discovery
 The system SHALL scan a change's `specs/` directory for delta spec files at `specs/<name>/spec.md`. Each found file SHALL be matched to an existing spec in `openspec/specs/<name>/spec.md` or flagged as a new spec creation.

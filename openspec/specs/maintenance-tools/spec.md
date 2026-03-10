@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Maintenance utilities that handle legacy slash-command cleanup, one-time profile migration, skill/command drift detection, and markdown-to-JSON conversion for specs and changes.
+
+## Requirements
 
 ### Requirement: Legacy cleanup
 The system SHALL detect and clean legacy OpenSpec patterns from the project. This includes removing old slash-command directories and OpenSpec marker blocks from AI tool configuration files. The cleanup MUST only remove patterns matching known legacy markers defined in `config.OpenSpecMarkers`.

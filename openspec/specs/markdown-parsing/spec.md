@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Markdown parsing pipeline that transforms spec and change documents into structured data, supporting hierarchical section parsing, delta parsing, requirements extraction, name normalization, format auto-detection, and case-insensitive matching.
+
+## Requirements
 
 ### Requirement: Generic section parsing
 The system SHALL parse any markdown document into a hierarchical tree of sections. Each section SHALL have a Level (determined by the number of `#` characters), Title (the heading text), Content (body text between this heading and the next), and Children (nested subsections). The parser SHALL support heading levels 1 through 6.

@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Adapter-based system that generates skill and command markdown files for multiple AI tools, dispatching to per-tool adapters via a registry and supporting configurable delivery modes, workflow mapping, and tool detection.
+
+## Requirements
 
 ### Requirement: Tool adapter system
 The system SHALL maintain a registry of tool adapters, one per supported AI tool. Each adapter SHALL implement the `ToolCommandAdapter` interface providing `GetToolID()`, `GenerateSkills()`, `GenerateCommands()`, and `GetSkillsDir()`. The registry MUST support lookup by tool ID.

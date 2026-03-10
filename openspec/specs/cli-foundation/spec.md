@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Core CLI framework built on Cobra that provides the root command entry point, version injection via ldflags, deprecated command aliases for backward compatibility, feedback submission, filesystem utilities, and cross-platform support.
+
+## Requirements
 
 ### Requirement: Root command and entry point
 The system SHALL provide a root Cobra command with `Execute()` as the entry point called from `main.go`. The root command SHALL display usage and help information when run without subcommands.

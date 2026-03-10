@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Project initialization command that creates the `openspec/` directory structure, generates `config.yaml`, configures AI tool integrations, supports force mode for legacy cleanup, and allows profile selection.
+
+## Requirements
 
 ### Requirement: Directory structure creation
 The system SHALL create the `openspec/` directory with `specs/` and `changes/` subdirectories when `openspec init` is run in a project root. Directories SHALL be created using `EnsureDir` which creates them if they do not already exist.

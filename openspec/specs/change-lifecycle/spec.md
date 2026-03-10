@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Change management commands that handle creating, listing, displaying, archiving, and discovering change proposals within the `openspec/changes/` directory, including metadata tracking and spec listing.
+
+## Requirements
 
 ### Requirement: Change creation
 The system SHALL create a new change directory at `openspec/changes/<name>/` when `openspec new change <name>` is run. The name MUST be validated as kebab-case: it must start with a letter and match the pattern `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`. The system SHALL write a `proposal.md` from the schema template and a `.openspec.yaml` metadata file with the schema name and creation date.

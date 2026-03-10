@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Shell completion script generator that produces bash, zsh, fish, and powershell completions for all CLI commands and flags, with shell argument validation and stdout output.
+
+## Requirements
 
 ### Requirement: Completion script generation
 The system SHALL generate shell-specific completion scripts for bash, zsh, fish, and powershell when `openspec completion <shell>` is run. Each generated script MUST provide completions for all commands, subcommands, and flags.

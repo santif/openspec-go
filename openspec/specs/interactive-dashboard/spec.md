@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Terminal dashboard that displays an overview of specs, active changes, and archived changes with progress visualization, color-coded status indicators, task progress bars, and graceful empty-state handling.
+
+## Requirements
 
 ### Requirement: Overview display
 The system SHALL display specs, active changes, and archived changes in a single terminal view when `openspec view` is run. Each section SHALL be clearly labeled and separated.
