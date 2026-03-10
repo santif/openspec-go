@@ -121,3 +121,70 @@ func TestGenerateSkillContent_WithExplicitFields(t *testing.T) {
 		t.Error("expected custom version")
 	}
 }
+
+func TestSkillTemplate_AllKnownWorkflows(t *testing.T) {
+	// Verify all known workflows return non-empty templates
+	knownWorkflows := []string{"propose", "explore", "apply", "archive", "new", "continue", "ff", "sync", "bulk-archive", "verify", "onboard"}
+	for _, wf := range knownWorkflows {
+		tmpl := SkillTemplate(wf)
+		if tmpl.Name == "" {
+			t.Errorf("SkillTemplate(%q): expected non-empty Name", wf)
+		}
+		if tmpl.Description == "" {
+			t.Errorf("SkillTemplate(%q): expected non-empty Description", wf)
+		}
+		if tmpl.Instructions == "" {
+			t.Errorf("SkillTemplate(%q): expected non-empty Instructions", wf)
+		}
+	}
+}
+
+func TestCommandTemplate_AllKnownWorkflows(t *testing.T) {
+	knownWorkflows := []string{"propose", "explore", "apply", "archive", "new", "continue", "ff", "sync", "bulk-archive", "verify", "onboard"}
+	for _, wf := range knownWorkflows {
+		tmpl := CommandTemplate(wf)
+		if tmpl.ID == "" {
+			t.Errorf("CommandTemplate(%q): expected non-empty ID", wf)
+		}
+		if tmpl.Name == "" {
+			t.Errorf("CommandTemplate(%q): expected non-empty Name", wf)
+		}
+		if tmpl.Body == "" {
+			t.Errorf("CommandTemplate(%q): expected non-empty Body", wf)
+		}
+		if tmpl.Category == "" {
+			t.Errorf("CommandTemplate(%q): expected non-empty Category", wf)
+		}
+		if len(tmpl.Tags) == 0 {
+			t.Errorf("CommandTemplate(%q): expected non-empty Tags", wf)
+		}
+	}
+}
+
+func TestLoadSkillContent_KnownWorkflow(t *testing.T) {
+	content := loadSkillContent("propose")
+	if content == "" {
+		t.Error("expected non-empty content for known workflow 'propose'")
+	}
+}
+
+func TestLoadSkillContent_UnknownWorkflow(t *testing.T) {
+	content := loadSkillContent("nonexistent-workflow-xyz")
+	if content != "" {
+		t.Errorf("expected empty content for unknown workflow, got %q", content)
+	}
+}
+
+func TestLoadCommandContent_KnownWorkflow(t *testing.T) {
+	content := loadCommandContent("propose")
+	if content == "" {
+		t.Error("expected non-empty content for known workflow 'propose'")
+	}
+}
+
+func TestLoadCommandContent_UnknownWorkflow(t *testing.T) {
+	content := loadCommandContent("nonexistent-workflow-xyz")
+	if content != "" {
+		t.Errorf("expected empty content for unknown workflow, got %q", content)
+	}
+}

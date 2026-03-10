@@ -255,3 +255,102 @@ Given valid payment info, process the payment.
 		t.Error("expected at least one delta")
 	}
 }
+
+func TestConvertChangeToJSON_MetadataAlwaysSet(t *testing.T) {
+	dir := t.TempDir()
+	changeDir := filepath.Join(dir, "openspec", "changes", "fix-bug")
+	if err := os.MkdirAll(changeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	changeContent := `# Fix Bug
+
+## Why
+Fix a critical bug in the system.
+
+## What Changes
+- **core:** Fix null pointer dereference
+`
+	changePath := filepath.Join(changeDir, "proposal.md")
+	if err := os.WriteFile(changePath, []byte(changeContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := ConvertChangeToJSON(changePath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var change schemas.Change
+	if err := json.Unmarshal([]byte(result), &change); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+
+	if change.Metadata == nil {
+		t.Fatal("expected metadata to be non-nil")
+	}
+	if change.Metadata.SourcePath != changePath {
+		t.Errorf("expected sourcePath %q, got %q", changePath, change.Metadata.SourcePath)
+	}
+}
+
+func TestExtractNameFromPath_SpecsAsLastSegment(t *testing.T) {
+	// "specs" is the last segment — no name after it, should use fallback
+	got := extractNameFromPath("openspec/specs")
+	if got != "specs" {
+		t.Errorf("extractNameFromPath(\"openspec/specs\") = %q, want %q", got, "specs")
+	}
+}
+
+func TestExtractNameFromPath_ChangesAsLastSegment(t *testing.T) {
+	got := extractNameFromPath("openspec/changes")
+	if got != "changes" {
+		t.Errorf("extractNameFromPath(\"openspec/changes\") = %q, want %q", got, "changes")
+	}
+}
+
+func TestConvertSpecToJSON_WithTitleHeader(t *testing.T) {
+	dir := t.TempDir()
+	specDir := filepath.Join(dir, "openspec", "specs", "payments")
+	if err := os.MkdirAll(specDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	specContent := `# Payments Spec
+
+## Purpose
+Handle payments for all users.
+
+## Requirements
+
+### Requirement: Process Payment
+The system SHALL process credit card payments.
+
+#### Scenario: Valid card
+Given a valid card, the payment is processed.
+`
+	specPath := filepath.Join(specDir, "spec.md")
+	if err := os.WriteFile(specPath, []byte(specContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := ConvertSpecToJSON(specPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var spec schemas.Spec
+	if err := json.Unmarshal([]byte(result), &spec); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+
+	if spec.Name != "payments" {
+		t.Errorf("expected name 'payments', got %q", spec.Name)
+	}
+	if spec.Metadata == nil {
+		t.Fatal("expected metadata")
+	}
+	if spec.Metadata.SourcePath != specPath {
+		t.Errorf("expected sourcePath %q, got %q", specPath, spec.Metadata.SourcePath)
+	}
+}

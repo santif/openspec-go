@@ -144,6 +144,151 @@ func TestMigrateIfNeeded_MigratesWhenWorkflowsInstalled(t *testing.T) {
 	}
 }
 
+func TestMigrateIfNeeded_InvalidJSON(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "config", "openspec")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, "config"))
+
+	// Write invalid JSON
+	if err := os.WriteFile(filepath.Join(configDir, "config.json"), []byte("{broken json!!!"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	err := MigrateIfNeeded(dir)
+	if err != nil {
+		t.Fatalf("expected nil error for invalid JSON (graceful skip), got: %v", err)
+	}
+}
+
+func TestMigrateIfNeeded_NoWorkflowsInstalled(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "config", "openspec")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, "config"))
+
+	// Config without profile (triggers migration path) but no workflows installed
+	cfg := map[string]interface{}{"featureFlags": map[string]interface{}{}}
+	data, _ := json.Marshal(cfg)
+	if err := os.WriteFile(filepath.Join(configDir, "config.json"), data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	err := MigrateIfNeeded(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Config should NOT have been modified (no workflows found)
+	readData, _ := os.ReadFile(filepath.Join(configDir, "config.json"))
+	var result map[string]interface{}
+	json.Unmarshal(readData, &result)
+	if _, hasProfile := result["profile"]; hasProfile {
+		t.Error("expected profile to NOT be set when no workflows are installed")
+	}
+}
+
+func TestMigrateIfNeeded_SetsDeliveryWhenMissing(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "config", "openspec")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, "config"))
+
+	// Config without profile or delivery fields
+	cfg := map[string]interface{}{"featureFlags": map[string]interface{}{}}
+	data, _ := json.Marshal(cfg)
+	if err := os.WriteFile(filepath.Join(configDir, "config.json"), data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a skill file so migration triggers
+	skillDir := filepath.Join(dir, ".claude", "skills", "openspec-propose")
+	if err := os.MkdirAll(skillDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("skill"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	err := MigrateIfNeeded(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Read back and verify delivery was inferred
+	readData, _ := os.ReadFile(filepath.Join(configDir, "config.json"))
+	var result map[string]interface{}
+	json.Unmarshal(readData, &result)
+	if result["delivery"] == nil {
+		t.Error("expected delivery to be set after migration")
+	}
+	if result["profile"] != "custom" {
+		t.Errorf("expected profile 'custom', got %v", result["profile"])
+	}
+}
+
+func TestScanInstalledWorkflows_MultipleTools(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create skills for multiple tools
+	for _, toolDir := range []string{".claude", ".cursor"} {
+		skillDir := filepath.Join(dir, toolDir, "skills", "openspec-explore")
+		if err := os.MkdirAll(skillDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("skill"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Also add a different workflow
+	applyDir := filepath.Join(dir, ".claude", "skills", "openspec-apply-change")
+	if err := os.MkdirAll(applyDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(applyDir, "SKILL.md"), []byte("skill"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	workflows := ScanInstalledWorkflows(dir)
+	if len(workflows) < 2 {
+		t.Fatalf("expected at least 2 workflows, got %d: %v", len(workflows), workflows)
+	}
+
+	foundExplore, foundApply := false, false
+	for _, wf := range workflows {
+		if wf == "explore" {
+			foundExplore = true
+		}
+		if wf == "apply" {
+			foundApply = true
+		}
+	}
+	if !foundExplore {
+		t.Error("expected 'explore' in workflows")
+	}
+	if !foundApply {
+		t.Error("expected 'apply' in workflows")
+	}
+}
+
+func TestMigrateIfNeeded_ConfigReadError(t *testing.T) {
+	dir := t.TempDir()
+	// Point to a non-existent XDG path (no config file at all)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, "nonexistent"))
+
+	err := MigrateIfNeeded(dir)
+	if err != nil {
+		t.Fatalf("expected nil error when config cannot be read, got: %v", err)
+	}
+}
+
 func TestWorkflowToSkillDir(t *testing.T) {
 	// Verify key mappings exist
 	expected := map[string]string{

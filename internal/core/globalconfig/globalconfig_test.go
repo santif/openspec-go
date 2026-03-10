@@ -400,6 +400,71 @@ func TestCopyDefault_ReturnsIndependentCopy(t *testing.T) {
 	}
 }
 
+func TestGetGlobalConfigDir_NoXDG_NoWindows(t *testing.T) {
+	// Ensure XDG is empty so fallback path is used
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	result := GetGlobalConfigDir()
+
+	home, _ := os.UserHomeDir()
+	expected := filepath.Join(home, ".config", GlobalConfigDirName)
+	if result != expected {
+		t.Errorf("expected %q, got %q", expected, result)
+	}
+}
+
+func TestGetGlobalDataDir_NoXDG_NoWindows(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", "")
+
+	result := GetGlobalDataDir()
+
+	home, _ := os.UserHomeDir()
+	expected := filepath.Join(home, ".local", "share", GlobalDataDirName)
+	if result != expected {
+		t.Errorf("expected %q, got %q", expected, result)
+	}
+}
+
+func TestSaveGlobalConfig_ErrorOnReadOnlyDir(t *testing.T) {
+	dir := t.TempDir()
+	// Create a file where the config directory should be, so MkdirAll fails
+	blocker := filepath.Join(dir, GlobalConfigDirName)
+	if err := os.WriteFile(blocker, []byte("not a dir"), 0444); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	cfg := GlobalConfig{Profile: ProfileCore}
+	err := SaveGlobalConfig(cfg)
+	if err == nil {
+		t.Error("expected error when config dir cannot be created")
+	}
+}
+
+func TestGetGlobalConfig_OverridesDelivery(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	configDir := filepath.Join(dir, GlobalConfigDirName)
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Config with delivery override
+	partial := `{"delivery":"commands","featureFlags":{"beta":true}}`
+	if err := os.WriteFile(filepath.Join(configDir, GlobalConfigFileName), []byte(partial), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := GetGlobalConfig()
+	if cfg.Delivery != DeliveryCommands {
+		t.Errorf("expected delivery %q, got %q", DeliveryCommands, cfg.Delivery)
+	}
+	if !cfg.FeatureFlags["beta"] {
+		t.Error("expected beta feature flag to be true")
+	}
+}
+
 func TestGetGlobalConfig_EmptyFile(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
