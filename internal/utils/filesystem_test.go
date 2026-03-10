@@ -3,6 +3,7 @@ package utils
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -238,6 +239,9 @@ func TestDetectShell_WithSHELLEnv(t *testing.T) {
 }
 
 func TestDetectShell_EmptySHELL(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fallback shell differs on Windows")
+	}
 	t.Setenv("SHELL", "")
 	result := DetectShell()
 	// On non-Windows, should fall back to "bash"

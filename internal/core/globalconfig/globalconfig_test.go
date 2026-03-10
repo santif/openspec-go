@@ -392,6 +392,9 @@ func TestCopyDefault_ReturnsIndependentCopy(t *testing.T) {
 	}
 
 	a.Profile = ProfileCustom
+	if a.Profile != ProfileCustom {
+		t.Error("expected profile to be set to ProfileCustom")
+	}
 	if b.Profile != ProfileCore {
 		t.Error("modifying profile on one copy should not affect the other")
 	}
