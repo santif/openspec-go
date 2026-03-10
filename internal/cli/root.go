@@ -2,6 +2,7 @@ package cli
 
 import (
 	"os"
+	"runtime/debug"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -27,6 +28,11 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable color output")
+	if version == "dev" {
+		if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+			version = info.Main.Version
+		}
+	}
 	rootCmd.Version = version
 }
 
