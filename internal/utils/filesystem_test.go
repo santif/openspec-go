@@ -226,7 +226,10 @@ func TestUpdateFileWithMarkers_EndBeforeStart(t *testing.T) {
 
 	err := UpdateFileWithMarkers(file, "new", "<!-- START -->", "<!-- END -->")
 	if err == nil {
-		t.Error("expected error when end marker appears before start marker")
+		t.Fatal("expected error when end marker appears before start marker")
+	}
+	if !strings.Contains(err.Error(), "end marker appears before start marker") {
+		t.Errorf("expected end-before-start error, got: %v", err)
 	}
 }
 
