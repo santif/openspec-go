@@ -267,6 +267,189 @@ func TestWriteFile_CreatesParentDirs(t *testing.T) {
 	}
 }
 
+func TestWriteFile_ErrorInvalidPath(t *testing.T) {
+	// /dev/null is a file, so creating a subdirectory under it should fail
+	err := WriteFile("/dev/null/impossible/file.txt", "content")
+	if err == nil {
+		t.Error("expected error for invalid path under /dev/null")
+	}
+}
+
+func TestUpdateFileWithMarkers_OnlyEndMarker(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "test.txt")
+
+	if err := WriteFile(file, "<!-- END -->\nsome content"); err != nil {
+		t.Fatal(err)
+	}
+
+	err := UpdateFileWithMarkers(file, "new", "<!-- START -->", "<!-- END -->")
+	if err == nil {
+		t.Error("expected error for unpaired end marker only")
+	}
+}
+
+func TestUpdateFileWithMarkers_NoMarkersInExistingFile(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "test.txt")
+
+	if err := WriteFile(file, "existing content without markers"); err != nil {
+		t.Fatal(err)
+	}
+
+	err := UpdateFileWithMarkers(file, "injected", "<!-- START -->", "<!-- END -->")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	content, _ := ReadFile(file)
+	if !strings.Contains(content, "injected") {
+		t.Error("expected injected content")
+	}
+	if !strings.Contains(content, "existing content without markers") {
+		t.Error("expected existing content to be preserved")
+	}
+}
+
+func TestRemoveMarkerBlock_OnlyStartMarker(t *testing.T) {
+	content := "before\n<!-- START -->\nsome content\nafter"
+	result := RemoveMarkerBlock(content, "<!-- START -->", "<!-- END -->")
+	// Should return unchanged since end marker is missing
+	if result != content {
+		t.Errorf("expected unchanged content, got %q", result)
+	}
+}
+
+func TestRemoveMarkerBlock_OnlyEndMarker(t *testing.T) {
+	content := "before\n<!-- END -->\nsome content"
+	result := RemoveMarkerBlock(content, "<!-- START -->", "<!-- END -->")
+	// Should return unchanged since start marker is missing
+	if result != content {
+		t.Errorf("expected unchanged content, got %q", result)
+	}
+}
+
+func TestRemoveMarkerBlock_EmptyResult(t *testing.T) {
+	content := "<!-- START -->\nonly marker content\n<!-- END -->"
+	result := RemoveMarkerBlock(content, "<!-- START -->", "<!-- END -->")
+	if result != "" {
+		t.Errorf("expected empty string, got %q", result)
+	}
+}
+
+func TestRemoveMarkerBlock_TripleBlankLines(t *testing.T) {
+	content := "before\n\n\n<!-- START -->\nmiddle\n<!-- END -->\n\n\nafter"
+	result := RemoveMarkerBlock(content, "<!-- START -->", "<!-- END -->")
+	if strings.Contains(result, "\n\n\n") {
+		t.Error("expected triple blank lines to be cleaned up")
+	}
+	if !strings.Contains(result, "before") {
+		t.Error("expected content before markers to be preserved")
+	}
+	if !strings.Contains(result, "after") {
+		t.Error("expected content after markers to be preserved")
+	}
+}
+
+func TestIsInteractive_CI(t *testing.T) {
+	t.Setenv("CI", "true")
+	if IsInteractive() {
+		t.Error("expected non-interactive when CI=true")
+	}
+}
+
+func TestIsInteractive_NoCI(t *testing.T) {
+	t.Setenv("CI", "")
+	// In test environment, stdin is likely not a terminal
+	result := IsInteractive()
+	// We just verify it doesn't panic — the result depends on the test runner
+	_ = result
+}
+
+func TestWriteChangeMetadata_InvalidDir(t *testing.T) {
+	meta := &ChangeMetadata{Schema: "test", Created: "2025-01-01"}
+	err := WriteChangeMetadata("/dev/null/impossible", meta)
+	if err == nil {
+		t.Error("expected error when writing to invalid path")
+	}
+}
+
+func TestToPosixPath_Backslashes(t *testing.T) {
+	tests := []struct {
+		input, want string
+	}{
+		{"a/b/c", "a/b/c"},
+		{`a\b\c`, "a/b/c"},
+		{`a\b/c\d`, "a/b/c/d"},
+		{"", ""},
+	}
+	for _, tt := range tests {
+		got := ToPosixPath(tt.input)
+		if got != tt.want {
+			t.Errorf("ToPosixPath(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestDetectShell_BashPath(t *testing.T) {
+	t.Setenv("SHELL", "/usr/bin/bash")
+	got := DetectShell()
+	if got != "bash" {
+		t.Errorf("DetectShell() = %q, want %q", got, "bash")
+	}
+}
+
+func TestDetectShell_EmptyFallback(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fallback differs on Windows")
+	}
+	t.Setenv("SHELL", "")
+	got := DetectShell()
+	if got != "bash" {
+		t.Errorf("DetectShell() = %q, want %q (default)", got, "bash")
+	}
+}
+
+func TestRemoveMarkerBlock_MarkerNotOnOwnLine(t *testing.T) {
+	// Markers embedded in text (not on their own line) should not be matched
+	content := "before text <!-- START --> middle <!-- END --> after text"
+	result := RemoveMarkerBlock(content, "<!-- START -->", "<!-- END -->")
+	// Markers are not on their own line, so they shouldn't be matched
+	if result != content {
+		t.Errorf("expected unchanged content when markers are not on own lines, got %q", result)
+	}
+}
+
+func TestRemoveMarkerBlock_MarkersWithWhitespace(t *testing.T) {
+	// Markers with leading/trailing whitespace on the same line should still match
+	content := "before\n  <!-- START -->  \nmiddle\n  <!-- END -->  \nafter"
+	result := RemoveMarkerBlock(content, "<!-- START -->", "<!-- END -->")
+	if strings.Contains(result, "middle") {
+		t.Error("expected marker block content to be removed")
+	}
+	if !strings.Contains(result, "before") {
+		t.Error("expected content before markers to be preserved")
+	}
+}
+
+func TestUpdateFileWithMarkers_EmptyContent(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "empty.txt")
+
+	err := UpdateFileWithMarkers(file, "", "<!-- START -->", "<!-- END -->")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	content, _ := ReadFile(file)
+	if !strings.Contains(content, "<!-- START -->") {
+		t.Error("expected start marker in new file")
+	}
+	if !strings.Contains(content, "<!-- END -->") {
+		t.Error("expected end marker in new file")
+	}
+}
+
 func TestReadChangeMetadata_InvalidYAML(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, ".openspec.yaml"), []byte("invalid: yaml: [broken"), 0644); err != nil {

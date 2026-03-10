@@ -234,3 +234,64 @@ func TestBaseAdapter_MultipleWorkflows(t *testing.T) {
 		t.Errorf("expected 3 commands, got %d", len(commands))
 	}
 }
+
+func TestBaseAdapter_GetToolID(t *testing.T) {
+	adapter := &BaseAdapter{ToolID: "my-tool", SkillsDir: ".mytool"}
+	if got := adapter.GetToolID(); got != "my-tool" {
+		t.Errorf("GetToolID() = %q, want %q", got, "my-tool")
+	}
+}
+
+func TestBaseAdapter_GetSkillsDir(t *testing.T) {
+	adapter := &BaseAdapter{ToolID: "my-tool", SkillsDir: ".mytool"}
+	if got := adapter.GetSkillsDir(); got != ".mytool" {
+		t.Errorf("GetSkillsDir() = %q, want %q", got, ".mytool")
+	}
+}
+
+func TestCodexAdapter_GenerateCommands_NoCodexHome(t *testing.T) {
+	t.Setenv("CODEX_HOME", "")
+	// Ensure UserHomeDir works (it should on any OS)
+	adapter := &CodexAdapter{BaseAdapter: BaseAdapter{ToolID: "codex", SkillsDir: ".codex"}}
+	results := adapter.GenerateCommands(testWorkflows)
+
+	if len(results) != 1 {
+		t.Fatalf("expected 1 command, got %d", len(results))
+	}
+	r := results[0]
+	if !strings.Contains(r.Dir, ".codex/prompts") {
+		t.Errorf("expected Dir containing '.codex/prompts', got %q", r.Dir)
+	}
+	if !strings.Contains(r.Content, "argument-hint:") {
+		t.Error("expected argument-hint field")
+	}
+}
+
+func TestBaseAdapter_GenerateSkills_UnknownWorkflow(t *testing.T) {
+	adapter := &BaseAdapter{ToolID: "test", SkillsDir: ".test"}
+	results := adapter.GenerateSkills([]string{"unknown-workflow"}, "1.0.0")
+
+	if len(results) != 1 {
+		t.Fatalf("expected 1 skill, got %d", len(results))
+	}
+	r := results[0]
+	if r.FileName != "openspec-unknown-workflow.md" {
+		t.Errorf("FileName = %q, want %q", r.FileName, "openspec-unknown-workflow.md")
+	}
+	if !strings.Contains(r.Content, "unknown-workflow") {
+		t.Error("expected unknown-workflow in content")
+	}
+}
+
+func TestBaseAdapter_GenerateCommands_UnknownWorkflow(t *testing.T) {
+	adapter := &BaseAdapter{ToolID: "test", SkillsDir: ".test"}
+	results := adapter.GenerateCommands([]string{"unknown-workflow"})
+
+	if len(results) != 1 {
+		t.Fatalf("expected 1 command, got %d", len(results))
+	}
+	r := results[0]
+	if !strings.Contains(r.Content, "description:") {
+		t.Error("expected description in fallback command content")
+	}
+}
