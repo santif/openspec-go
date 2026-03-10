@@ -149,11 +149,14 @@ rules:
     - Keep proposals under 2 pages
   specs:
     - Use RFC 2119 keywords (SHALL, MUST)
+keywords:
+  normative: ["SHALL", "MUST"]   # o en español ["DEBE", "DEBERÁ", "DEBERA"]
 ```
 
 - **schema** — which artifact workflow to use
 - **context** — project context injected into instructions (max 50KB)
 - **rules** — per-artifact rules mapped to artifact IDs
+- **keywords.normative** — normative keywords validated in spec requirements (default: `SHALL`, `MUST`)
 
 ## Project Data Layout
 
