@@ -1,6 +1,8 @@
 package specsapply
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -866,5 +868,160 @@ func TestWriteUpdatedSpec(t *testing.T) {
 	}
 	if written != content {
 		t.Error("written content does not match expected")
+	}
+}
+
+func TestWriteUpdatedSpec_Verbose(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "specs", "auth", "spec.md")
+	update := SpecUpdate{
+		Source: "/some/source",
+		Target: target,
+	}
+
+	content := "# Auth Specification\n\n## Purpose\nAuth.\n\n## Requirements\n\n### Requirement: Login\nSHALL login.\n\n#### Scenario: T\n- **WHEN** test\n"
+	counts := ApplyResult{Added: 1, Modified: 1, Removed: 1, Renamed: 1}
+
+	// Redirect stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := WriteUpdatedSpec(update, content, counts, false)
+
+	w.Close()
+	os.Stdout = old
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(output, "Applying changes to") {
+		t.Errorf("expected output to contain 'Applying changes to', got: %s", output)
+	}
+	if !strings.Contains(output, "+ 1 added") {
+		t.Errorf("expected output to contain '+ 1 added', got: %s", output)
+	}
+	if !strings.Contains(output, "~ 1 modified") {
+		t.Errorf("expected output to contain '~ 1 modified', got: %s", output)
+	}
+	if !strings.Contains(output, "- 1 removed") {
+		t.Errorf("expected output to contain '- 1 removed', got: %s", output)
+	}
+	if !strings.Contains(output, "1 renamed") {
+		t.Errorf("expected output to contain '1 renamed', got: %s", output)
+	}
+}
+
+func TestApplySpecs_ChangeNotFound(t *testing.T) {
+	root := t.TempDir()
+	changesDir := filepath.Join(root, "openspec", "changes")
+	if err := os.MkdirAll(changesDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := ApplySpecs(root, "nonexistent-change", ApplyOptions{})
+	if err == nil {
+		t.Fatal("expected error for non-existent change")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("expected error to contain 'not found', got: %v", err)
+	}
+}
+
+func TestApplySpecs_NoSpecUpdates(t *testing.T) {
+	root := t.TempDir()
+	changesDir := filepath.Join(root, "openspec", "changes", "test-change")
+	if err := os.MkdirAll(changesDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	// Create a proposal.md so the change dir exists but has no specs/ subdir
+	if err := os.WriteFile(filepath.Join(changesDir, "proposal.md"), []byte("# Proposal\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	output, err := ApplySpecs(root, "test-change", ApplyOptions{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !output.NoChanges {
+		t.Error("expected NoChanges to be true")
+	}
+}
+
+func TestApplySpecs_WithValidation(t *testing.T) {
+	root := t.TempDir()
+	changesDir := filepath.Join(root, "openspec", "changes", "test-change")
+
+	// Delta that produces invalid spec (requirement with no proper scenario)
+	deltaContent := `## ADDED Requirements
+
+### Requirement: Bad
+No normative keywords here.
+`
+	if err := os.MkdirAll(filepath.Join(changesDir, "specs", "bad-spec"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(changesDir, "specs", "bad-spec", "spec.md"), []byte(deltaContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := ApplySpecs(root, "test-change", ApplyOptions{SkipValidation: false})
+	if err == nil {
+		t.Fatal("expected error for validation failure")
+	}
+	if !strings.Contains(err.Error(), "validation errors") {
+		t.Errorf("expected error to contain 'validation errors', got: %v", err)
+	}
+}
+
+func TestApplySpecs_DryRun_Verbose(t *testing.T) {
+	root := t.TempDir()
+	changesDir := filepath.Join(root, "openspec", "changes", "test-change")
+
+	if err := os.MkdirAll(filepath.Join(changesDir, "specs", "auth"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(changesDir, "specs", "auth", "spec.md"), []byte(`## ADDED Requirements
+
+### Requirement: Login
+The system SHALL allow users to login.
+
+#### Scenario: Basic login
+- **WHEN** user enters valid credentials
+- **THEN** system grants access
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Redirect stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	output, err := ApplySpecs(root, "test-change", ApplyOptions{DryRun: true, Silent: false, SkipValidation: true})
+
+	w.Close()
+	os.Stdout = old
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	captured := buf.String()
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if output.NoChanges {
+		t.Error("expected NoChanges to be false")
+	}
+	if !strings.Contains(captured, "Would apply changes to") {
+		t.Errorf("expected output to contain 'Would apply changes to', got: %s", captured)
+	}
+
+	// File should NOT have been written
+	specsDir := filepath.Join(root, "openspec", "specs")
+	if utils.FileExists(filepath.Join(specsDir, "auth", "spec.md")) {
+		t.Error("spec should not have been written in dry-run mode")
 	}
 }

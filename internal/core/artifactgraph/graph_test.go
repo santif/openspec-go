@@ -1,6 +1,8 @@
 package artifactgraph
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -147,5 +149,122 @@ func TestIsComplete(t *testing.T) {
 	}
 	if !g.IsComplete(map[string]bool{"a": true, "b": true}) {
 		t.Error("expected complete with both a and b")
+	}
+}
+
+func TestNewGraphFromYamlContent(t *testing.T) {
+	yamlStr := `name: test-schema
+version: 1
+artifacts:
+  - id: proposal
+    generates: proposal.md
+    template: proposal.md
+    requires: []`
+
+	graph, err := NewGraphFromYamlContent(yamlStr)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if graph.GetName() != "test-schema" {
+		t.Errorf("expected name %q, got %q", "test-schema", graph.GetName())
+	}
+}
+
+func TestNewGraphFromYamlContent_Invalid(t *testing.T) {
+	_, err := NewGraphFromYamlContent("not: valid: yaml: [")
+	if err == nil {
+		t.Fatal("expected error for invalid YAML, got nil")
+	}
+}
+
+func TestNewGraphFromYaml(t *testing.T) {
+	yamlStr := `name: file-schema
+version: 1
+artifacts:
+  - id: spec
+    generates: spec.md
+    template: spec.md
+    requires: []`
+
+	tmpDir := t.TempDir()
+	schemaPath := filepath.Join(tmpDir, "schema.yaml")
+	if err := os.WriteFile(schemaPath, []byte(yamlStr), 0644); err != nil {
+		t.Fatalf("failed to write temp schema file: %v", err)
+	}
+
+	graph, err := NewGraphFromYaml(schemaPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if graph.GetName() != "file-schema" {
+		t.Errorf("expected name %q, got %q", "file-schema", graph.GetName())
+	}
+}
+
+func TestNewGraphFromYaml_NotFound(t *testing.T) {
+	_, err := NewGraphFromYaml("/nonexistent/path/schema.yaml")
+	if err == nil {
+		t.Fatal("expected error for non-existent file, got nil")
+	}
+}
+
+func TestGetArtifact(t *testing.T) {
+	schema := buildTestSchema([]Artifact{
+		{ID: "a", Generates: "a.md", Template: "t.md", Requires: []string{}},
+		{ID: "b", Generates: "b.md", Template: "t.md", Requires: []string{"a"}},
+	})
+	g := NewGraphFromSchema(schema)
+
+	a := g.GetArtifact("a")
+	if a == nil {
+		t.Fatal("expected artifact 'a' to be found, got nil")
+	}
+	if a.ID != "a" {
+		t.Errorf("expected artifact ID %q, got %q", "a", a.ID)
+	}
+
+	missing := g.GetArtifact("nonexistent")
+	if missing != nil {
+		t.Errorf("expected nil for non-existent artifact, got %+v", missing)
+	}
+}
+
+func TestGetName(t *testing.T) {
+	schema := buildTestSchema([]Artifact{
+		{ID: "a", Generates: "a.md", Template: "t.md", Requires: []string{}},
+	})
+	g := NewGraphFromSchema(schema)
+
+	if g.GetName() != "test" {
+		t.Errorf("expected name %q, got %q", "test", g.GetName())
+	}
+}
+
+func TestGetVersion(t *testing.T) {
+	schema := buildTestSchema([]Artifact{
+		{ID: "a", Generates: "a.md", Template: "t.md", Requires: []string{}},
+	})
+	g := NewGraphFromSchema(schema)
+
+	if g.GetVersion() != 1 {
+		t.Errorf("expected version %d, got %d", 1, g.GetVersion())
+	}
+}
+
+func TestGetSchema(t *testing.T) {
+	schema := buildTestSchema([]Artifact{
+		{ID: "a", Generates: "a.md", Template: "t.md", Requires: []string{}},
+	})
+	g := NewGraphFromSchema(schema)
+
+	s := g.GetSchema()
+	if s == nil {
+		t.Fatal("expected GetSchema() to return non-nil schema")
+	}
+	if s.Name != "test" {
+		t.Errorf("expected schema name %q, got %q", "test", s.Name)
+	}
+	if s.Version != 1 {
+		t.Errorf("expected schema version %d, got %d", 1, s.Version)
 	}
 }
