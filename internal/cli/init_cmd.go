@@ -85,7 +85,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		if tool.SkillsDir == "" {
 			continue
 		}
-		files, err := commandgen.GenerateForTool(tool.Value, workflows, gcfg.Delivery, version)
+		files, err := commandgen.GenerateForTool(tool.Value, workflows, gcfg.Delivery, version, nil)
 		if err != nil {
 			continue
 		}

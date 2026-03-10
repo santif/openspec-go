@@ -435,10 +435,12 @@ func ApplySpecs(projectRoot, changeName string, opts ApplyOptions) (ApplyOutput,
 	if !opts.SkipValidation {
 		// Read project config for custom keywords
 		var keywords []string
+		var conditionals *projectconfig.ConditionalsConfig
 		if cfg := projectconfig.ReadProjectConfig(projectRoot); cfg != nil && cfg.Keywords != nil {
 			keywords = cfg.Keywords.Normative
+			conditionals = cfg.Keywords.Conditionals
 		}
-		v := validation.NewValidatorWithKeywords(false, keywords)
+		v := validation.NewValidatorWithKeywords(false, keywords, conditionals)
 		for _, p := range preparedUpdates {
 			specName := filepath.Base(filepath.Dir(p.update.Target))
 			report := v.ValidateSpecContent(specName, p.rebuilt)

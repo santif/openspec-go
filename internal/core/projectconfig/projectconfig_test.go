@@ -444,3 +444,174 @@ func TestValidateConfigRules_InvalidArtifactIDs(t *testing.T) {
 		t.Error("expected warning about 'also-not-valid' artifact ID")
 	}
 }
+
+func TestReadProjectConfig_ParsesConditionals(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "openspec")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	content := `schema: spec-driven
+keywords:
+  normative: ["DEBE"]
+  conditionals:
+    when: "CUANDO"
+    then: "ENTONCES"
+    and: "Y"
+`
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	config := ReadProjectConfig(dir)
+	if config == nil {
+		t.Fatal("expected non-nil config")
+	}
+	if config.Keywords == nil {
+		t.Fatal("expected non-nil Keywords")
+	}
+	if config.Keywords.Conditionals == nil {
+		t.Fatal("expected non-nil Conditionals")
+	}
+	if config.Keywords.Conditionals.When != "CUANDO" {
+		t.Errorf("expected When='CUANDO', got %q", config.Keywords.Conditionals.When)
+	}
+	if config.Keywords.Conditionals.Then != "ENTONCES" {
+		t.Errorf("expected Then='ENTONCES', got %q", config.Keywords.Conditionals.Then)
+	}
+	if config.Keywords.Conditionals.And != "Y" {
+		t.Errorf("expected And='Y', got %q", config.Keywords.Conditionals.And)
+	}
+}
+
+func TestReadProjectConfig_ConditionalsPartial(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "openspec")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	content := `schema: spec-driven
+keywords:
+  conditionals:
+    when: "CUANDO"
+`
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	config := ReadProjectConfig(dir)
+	if config == nil {
+		t.Fatal("expected non-nil config")
+	}
+	if config.Keywords.Conditionals == nil {
+		t.Fatal("expected non-nil Conditionals")
+	}
+	if config.Keywords.Conditionals.When != "CUANDO" {
+		t.Errorf("expected When='CUANDO', got %q", config.Keywords.Conditionals.When)
+	}
+	if config.Keywords.Conditionals.Then != "" {
+		t.Errorf("expected Then='', got %q", config.Keywords.Conditionals.Then)
+	}
+	if config.Keywords.Conditionals.And != "" {
+		t.Errorf("expected And='', got %q", config.Keywords.Conditionals.And)
+	}
+}
+
+func TestReadProjectConfig_ConditionalsAbsent(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "openspec")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	content := `schema: spec-driven
+keywords:
+  normative: ["SHALL"]
+`
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	config := ReadProjectConfig(dir)
+	if config == nil {
+		t.Fatal("expected non-nil config")
+	}
+	if config.Keywords == nil {
+		t.Fatal("expected non-nil Keywords")
+	}
+	if config.Keywords.Conditionals != nil {
+		t.Errorf("expected nil Conditionals when not in config, got %+v", config.Keywords.Conditionals)
+	}
+}
+
+func TestResolveConditionals_Nil(t *testing.T) {
+	c := ResolveConditionals(nil)
+	if c.When != "WHEN" || c.Then != "THEN" || c.And != "AND" {
+		t.Errorf("expected defaults, got %+v", c)
+	}
+}
+
+func TestResolveConditionals_NilConditionals(t *testing.T) {
+	kw := &KeywordsConfig{Normative: []string{"SHALL"}}
+	c := ResolveConditionals(kw)
+	if c.When != "WHEN" || c.Then != "THEN" || c.And != "AND" {
+		t.Errorf("expected defaults, got %+v", c)
+	}
+}
+
+func TestResolveConditionals_Configured(t *testing.T) {
+	kw := &KeywordsConfig{
+		Conditionals: &ConditionalsConfig{When: "CUANDO", Then: "ENTONCES", And: "Y"},
+	}
+	c := ResolveConditionals(kw)
+	if c.When != "CUANDO" || c.Then != "ENTONCES" || c.And != "Y" {
+		t.Errorf("expected configured values, got %+v", c)
+	}
+}
+
+func TestValidateKeywords_ValidConditionals(t *testing.T) {
+	kw := &KeywordsConfig{
+		Normative:    []string{"SHALL"},
+		Conditionals: &ConditionalsConfig{When: "CUANDO", Then: "ENTONCES", And: "Y"},
+	}
+	warnings := ValidateKeywords(kw)
+	if len(warnings) != 0 {
+		t.Errorf("expected no warnings, got: %v", warnings)
+	}
+}
+
+func TestValidateKeywords_EmptyConditionalValue(t *testing.T) {
+	kw := &KeywordsConfig{
+		Normative:    []string{"SHALL"},
+		Conditionals: &ConditionalsConfig{When: "", Then: "ENTONCES", And: "Y"},
+	}
+	warnings := ValidateKeywords(kw)
+	found := false
+	for _, w := range warnings {
+		if strings.Contains(w, "conditionals.when") && strings.Contains(w, "empty") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected warning about empty conditionals.when, got: %v", warnings)
+	}
+}
+
+func TestValidateKeywords_ConditionalRegexMetachars(t *testing.T) {
+	kw := &KeywordsConfig{
+		Normative:    []string{"SHALL"},
+		Conditionals: &ConditionalsConfig{When: "WHEN(ever)", Then: "THEN", And: "AND"},
+	}
+	warnings := ValidateKeywords(kw)
+	found := false
+	for _, w := range warnings {
+		if strings.Contains(w, "regex metacharacters") && strings.Contains(w, "when") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected warning about metacharacters in conditionals, got: %v", warnings)
+	}
+}

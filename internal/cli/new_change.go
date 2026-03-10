@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -92,12 +93,20 @@ func runNewChange(cmd *cobra.Command, args []string) error {
 	graph := artifactgraph.NewGraphFromSchema(schema)
 	buildOrder := graph.GetBuildOrder()
 
+	// Read project config for conditional keywords
+	cfg := projectconfig.ReadProjectConfig(projectRoot)
+
 	// Write first artifact template (usually proposal.md)
 	if len(buildOrder) > 0 {
 		firstArtifact := graph.GetArtifact(buildOrder[0])
 		if firstArtifact != nil {
 			templateContent, err := artifactgraph.ReadTemplate(schemaName, firstArtifact.Template)
 			if err == nil {
+				// Apply conditional keyword substitution if configured
+				if cfg != nil && cfg.Keywords != nil && cfg.Keywords.Conditionals != nil {
+					cond := cfg.Keywords.Conditionals
+					templateContent = replaceConditionalKeywords(templateContent, cond)
+				}
 				templatePath := filepath.Join(changeDir, firstArtifact.Generates)
 				if writeErr := utils.WriteFile(templatePath, templateContent); writeErr != nil {
 					fmt.Fprintf(os.Stderr, "Warning: failed to write template %s: %v\n", firstArtifact.Generates, writeErr)
@@ -124,4 +133,13 @@ func runNewChange(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  Next: Edit %s/proposal.md to describe your change\n\n", changeDir)
 
 	return nil
+}
+
+// replaceConditionalKeywords replaces bold-formatted default keywords in template content
+// with the configured conditional keywords.
+func replaceConditionalKeywords(content string, cond *projectconfig.ConditionalsConfig) string {
+	content = strings.ReplaceAll(content, "**WHEN**", "**"+cond.When+"**")
+	content = strings.ReplaceAll(content, "**THEN**", "**"+cond.Then+"**")
+	content = strings.ReplaceAll(content, "**AND**", "**"+cond.And+"**")
+	return content
 }

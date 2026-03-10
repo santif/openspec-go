@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/santif/openspec-go/internal/core/globalconfig"
+	"github.com/santif/openspec-go/internal/core/projectconfig"
 )
 
 func TestGenerateForTool_UnknownTool(t *testing.T) {
@@ -12,7 +13,7 @@ func TestGenerateForTool_UnknownTool(t *testing.T) {
 	registry = map[string]ToolCommandAdapter{}
 	defer func() { registry = orig }()
 
-	_, err := GenerateForTool("nonexistent", []string{"propose"}, globalconfig.DeliveryBoth, "1.0.0")
+	_, err := GenerateForTool("nonexistent", []string{"propose"}, globalconfig.DeliveryBoth, "1.0.0", nil)
 	if err == nil {
 		t.Fatal("expected error for unknown tool")
 	}
@@ -49,7 +50,7 @@ func TestGenerateForTool_DeliverySkills(t *testing.T) {
 
 	Register(&skillOnlyAdapter{mockAdapter: mockAdapter{toolID: "test"}})
 
-	results, err := GenerateForTool("test", []string{"propose"}, globalconfig.DeliverySkills, "1.0.0")
+	results, err := GenerateForTool("test", []string{"propose"}, globalconfig.DeliverySkills, "1.0.0", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -68,7 +69,7 @@ func TestGenerateForTool_DeliveryCommands(t *testing.T) {
 
 	Register(&skillOnlyAdapter{mockAdapter: mockAdapter{toolID: "test"}})
 
-	results, err := GenerateForTool("test", []string{"propose"}, globalconfig.DeliveryCommands, "1.0.0")
+	results, err := GenerateForTool("test", []string{"propose"}, globalconfig.DeliveryCommands, "1.0.0", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -87,7 +88,7 @@ func TestGenerateForTool_DeliveryBoth(t *testing.T) {
 
 	Register(&skillOnlyAdapter{mockAdapter: mockAdapter{toolID: "test"}})
 
-	results, err := GenerateForTool("test", []string{"propose"}, globalconfig.DeliveryBoth, "1.0.0")
+	results, err := GenerateForTool("test", []string{"propose"}, globalconfig.DeliveryBoth, "1.0.0", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -103,11 +104,50 @@ func TestGenerateForTool_EmptyWorkflows(t *testing.T) {
 
 	Register(&skillOnlyAdapter{mockAdapter: mockAdapter{toolID: "test"}})
 
-	results, err := GenerateForTool("test", []string{}, globalconfig.DeliveryBoth, "1.0.0")
+	results, err := GenerateForTool("test", []string{}, globalconfig.DeliveryBoth, "1.0.0", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(results) != 0 {
 		t.Errorf("expected 0 results for empty workflows, got %d", len(results))
+	}
+}
+
+func TestGenerateForTool_WithConditionals(t *testing.T) {
+	orig := registry
+	registry = map[string]ToolCommandAdapter{}
+	defer func() { registry = orig }()
+
+	Register(&skillOnlyAdapter{mockAdapter: mockAdapter{toolID: "test"}})
+
+	cond := &projectconfig.ConditionalsConfig{When: "CUANDO", Then: "ENTONCES", And: "Y"}
+	results, err := GenerateForTool("test", []string{"propose"}, globalconfig.DeliverySkills, "1.0.0", cond)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+	if !strings.Contains(results[0].Content, "**CUANDO**") || !strings.Contains(results[0].Content, "**ENTONCES**") {
+		t.Errorf("expected Project Keywords block with CUANDO/ENTONCES, got: %s", results[0].Content)
+	}
+}
+
+func TestGenerateForTool_NilConditionalsNoBlock(t *testing.T) {
+	orig := registry
+	registry = map[string]ToolCommandAdapter{}
+	defer func() { registry = orig }()
+
+	Register(&skillOnlyAdapter{mockAdapter: mockAdapter{toolID: "test"}})
+
+	results, err := GenerateForTool("test", []string{"propose"}, globalconfig.DeliverySkills, "1.0.0", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+	if strings.Contains(results[0].Content, "Project Keywords") {
+		t.Error("should not contain Project Keywords block when conditionals is nil")
 	}
 }

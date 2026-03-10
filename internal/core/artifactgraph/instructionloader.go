@@ -3,6 +3,8 @@ package artifactgraph
 import (
 	"fmt"
 	"strings"
+
+	"github.com/santif/openspec-go/internal/core/projectconfig"
 )
 
 // EnrichedInstruction holds the combined instruction text for an artifact.
@@ -13,7 +15,7 @@ type EnrichedInstruction struct {
 
 // LoadEnrichedInstruction builds an enriched instruction for an artifact,
 // combining the base instruction with project context and rules.
-func LoadEnrichedInstruction(graph *ArtifactGraph, artifactID string, context string, rules map[string][]string) (*EnrichedInstruction, error) {
+func LoadEnrichedInstruction(graph *ArtifactGraph, artifactID string, context string, rules map[string][]string, conditionals *projectconfig.ConditionalsConfig) (*EnrichedInstruction, error) {
 	artifact := graph.GetArtifact(artifactID)
 	if artifact == nil {
 		return nil, fmt.Errorf("artifact %q not found in schema", artifactID)
@@ -43,6 +45,12 @@ func LoadEnrichedInstruction(graph *ArtifactGraph, artifactID string, context st
 		}
 	}
 
+	// Conditional keywords instruction
+	if conditionals != nil {
+		parts = append(parts, fmt.Sprintf("**Project Keywords**: This project uses custom scenario keywords. Use **%s** instead of WHEN, **%s** instead of THEN, and **%s** instead of AND in all scenarios.",
+			conditionals.When, conditionals.Then, conditionals.And))
+	}
+
 	return &EnrichedInstruction{
 		ArtifactID:  artifactID,
 		Instruction: strings.Join(parts, "\n\n"),
@@ -50,7 +58,7 @@ func LoadEnrichedInstruction(graph *ArtifactGraph, artifactID string, context st
 }
 
 // LoadApplyInstruction builds an enriched instruction for the apply phase.
-func LoadApplyInstruction(graph *ArtifactGraph, context string, rules map[string][]string) (*EnrichedInstruction, error) {
+func LoadApplyInstruction(graph *ArtifactGraph, context string, rules map[string][]string, conditionals *projectconfig.ConditionalsConfig) (*EnrichedInstruction, error) {
 	schema := graph.GetSchema()
 	if schema.Apply == nil {
 		return nil, fmt.Errorf("schema %q does not define an apply phase", schema.Name)
@@ -76,6 +84,11 @@ func LoadApplyInstruction(graph *ArtifactGraph, context string, rules map[string
 			rulesText += "</rules>"
 			parts = append(parts, rulesText)
 		}
+	}
+
+	if conditionals != nil {
+		parts = append(parts, fmt.Sprintf("**Project Keywords**: This project uses custom scenario keywords. Use **%s** instead of WHEN, **%s** instead of THEN, and **%s** instead of AND in all scenarios.",
+			conditionals.When, conditionals.Then, conditionals.And))
 	}
 
 	return &EnrichedInstruction{
