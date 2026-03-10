@@ -138,8 +138,15 @@ func runNewChange(cmd *cobra.Command, args []string) error {
 // replaceConditionalKeywords replaces bold-formatted default keywords in template content
 // with the configured conditional keywords.
 func replaceConditionalKeywords(content string, cond *projectconfig.ConditionalsConfig) string {
-	content = strings.ReplaceAll(content, "**WHEN**", "**"+cond.When+"**")
-	content = strings.ReplaceAll(content, "**THEN**", "**"+cond.Then+"**")
-	content = strings.ReplaceAll(content, "**AND**", "**"+cond.And+"**")
+	if cond.When != "" {
+		content = strings.ReplaceAll(content, "**WHEN**", "**"+cond.When+"**")
+	}
+	if cond.Then != "" {
+		content = strings.ReplaceAll(content, "**THEN**", "**"+cond.Then+"**")
+	}
+	if cond.And != "" {
+		content = strings.ReplaceAll(content, "**AND**", "**"+cond.And+"**")
+	}
 	return content
+}
 }
