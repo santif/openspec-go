@@ -7,8 +7,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
-	coreconfig "github.com/santif/openspec-go/internal/core/config"
 	"github.com/santif/openspec-go/internal/core/artifactgraph"
+	coreconfig "github.com/santif/openspec-go/internal/core/config"
 	"github.com/santif/openspec-go/internal/core/projectconfig"
 	"github.com/santif/openspec-go/internal/utils"
 )

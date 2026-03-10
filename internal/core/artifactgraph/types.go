@@ -19,10 +19,10 @@ type ApplyPhase struct {
 
 // SchemaYaml represents the parsed schema YAML file.
 type SchemaYaml struct {
-	Name        string     `yaml:"name" json:"name"`
-	Version     int        `yaml:"version" json:"version"`
-	Description string     `yaml:"description,omitempty" json:"description,omitempty"`
-	Artifacts   []Artifact `yaml:"artifacts" json:"artifacts"`
+	Name        string      `yaml:"name" json:"name"`
+	Version     int         `yaml:"version" json:"version"`
+	Description string      `yaml:"description,omitempty" json:"description,omitempty"`
+	Artifacts   []Artifact  `yaml:"artifacts" json:"artifacts"`
 	Apply       *ApplyPhase `yaml:"apply,omitempty" json:"apply,omitempty"`
 }
 

@@ -63,8 +63,7 @@ func FindSpecUpdates(changeDir, mainSpecsDir string) ([]SpecUpdate, error) {
 
 	entries, err := os.ReadDir(changeSpecsDir)
 	if err != nil {
-		// No specs directory is not an error
-		return nil, nil
+		return nil, nil //nolint:nilerr // No specs directory is not an error
 	}
 
 	for _, entry := range entries {
@@ -192,7 +191,7 @@ func BuildUpdatedSpec(update SpecUpdate, changeName string) (string, ApplyResult
 	if hasAnyDelta == 0 {
 		sourceName := filepath.Base(filepath.Dir(update.Source))
 		return "", ApplyResult{}, fmt.Errorf(
-			"Delta parsing found no operations for %s. Provide ADDED/MODIFIED/REMOVED/RENAMED sections in change spec.", sourceName)
+			"delta parsing found no operations for %s: provide ADDED/MODIFIED/REMOVED/RENAMED sections in change spec", sourceName)
 	}
 
 	// Load or create base target content
@@ -208,7 +207,7 @@ func BuildUpdatedSpec(update SpecUpdate, changeName string) (string, ApplyResult
 		// New spec: only ADDED allowed
 		if len(plan.Modified) > 0 || len(plan.Renamed) > 0 {
 			return "", ApplyResult{}, fmt.Errorf(
-				"%s: target spec does not exist; only ADDED requirements are allowed for new specs. MODIFIED and RENAMED operations require an existing spec.", specName)
+				"%s: target spec does not exist; only ADDED requirements are allowed for new specs, MODIFIED and RENAMED operations require an existing spec", specName)
 		}
 		if len(plan.Removed) > 0 {
 			fmt.Printf("⚠️  Warning: %s - %d REMOVED requirement(s) ignored for new spec (nothing to remove).\n", specName, len(plan.Removed))
@@ -396,7 +395,7 @@ func ApplySpecs(projectRoot, changeName string, opts ApplyOptions) (ApplyOutput,
 	// Verify change exists
 	info, err := os.Stat(changeDir)
 	if err != nil || !info.IsDir() {
-		return ApplyOutput{}, fmt.Errorf("Change '%s' not found.", changeName)
+		return ApplyOutput{}, fmt.Errorf("change %q not found", changeName)
 	}
 
 	// Find specs to update
@@ -450,7 +449,7 @@ func ApplySpecs(projectRoot, changeName string, opts ApplyOptions) (ApplyOutput,
 						errors = append(errors, fmt.Sprintf("  ✗ %s", issue.Message))
 					}
 				}
-				return ApplyOutput{}, fmt.Errorf("Validation errors in rebuilt spec for %s:\n%s", specName, strings.Join(errors, "\n"))
+				return ApplyOutput{}, fmt.Errorf("validation errors in rebuilt spec for %s:\n%s", specName, strings.Join(errors, "\n"))
 			}
 		}
 	}

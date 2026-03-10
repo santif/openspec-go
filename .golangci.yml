@@ -1,0 +1,61 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: none
+  enable:
+    # Bug detection
+    - errcheck
+    - govet
+    - staticcheck
+    - nilerr
+
+    # Code simplification
+    - ineffassign
+    - unused
+    - usestdlibvars
+
+    # Style & consistency
+    - misspell
+    - unconvert
+    - unparam
+    - whitespace
+
+    # Error handling
+    - errorlint
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      exclude-functions:
+        - (*github.com/fatih/color.Color).Printf
+        - (*github.com/fatih/color.Color).Println
+        - (*github.com/fatih/color.Color).Fprintf
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+    staticcheck:
+      checks:
+        - "all"
+        - "-ST1000"
+    misspell:
+      locale: US
+
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - unparam
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/santif/openspec-go

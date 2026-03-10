@@ -86,7 +86,7 @@ func MigrateIfNeeded(projectPath string) error {
 	}
 
 	if err := json.Unmarshal(data, &rawConfig); err != nil {
-		return nil // Invalid JSON, skip migration
+		return nil //nolint:nilerr // Invalid JSON, skip migration gracefully
 	}
 
 	// If profile is already explicitly set, no migration needed

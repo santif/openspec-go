@@ -109,10 +109,10 @@ func ParseSpec(name, content string) (*schemas.Spec, error) {
 	requirementsSection := FindSection(sections, "Requirements")
 
 	if purposeSection == nil || purposeSection.Content == "" {
-		return nil, fmt.Errorf("Spec must have a Purpose section")
+		return nil, fmt.Errorf("spec must have a Purpose section")
 	}
 	if requirementsSection == nil {
-		return nil, fmt.Errorf("Spec must have a Requirements section")
+		return nil, fmt.Errorf("spec must have a Requirements section")
 	}
 
 	requirements := parseRequirements(requirementsSection)
@@ -134,10 +134,10 @@ func ParseChange(name, content string) (*schemas.Change, error) {
 	whatChangesSection := FindSection(sections, "What Changes")
 
 	if whySection == nil || whySection.Content == "" {
-		return nil, fmt.Errorf("Change must have a Why section")
+		return nil, fmt.Errorf("change must have a Why section")
 	}
 	if whatChangesSection == nil || whatChangesSection.Content == "" {
-		return nil, fmt.Errorf("Change must have a What Changes section")
+		return nil, fmt.Errorf("change must have a What Changes section")
 	}
 
 	deltas := parseDeltas(whatChangesSection.Content)

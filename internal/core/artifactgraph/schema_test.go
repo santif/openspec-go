@@ -33,8 +33,8 @@ artifacts:
 
 func TestParseSchema_MissingFields(t *testing.T) {
 	tests := []struct {
-		name string
-		yaml string
+		name        string
+		yaml        string
 		errContains string
 	}{
 		{

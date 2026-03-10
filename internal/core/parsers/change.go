@@ -16,10 +16,10 @@ func ParseChangeWithDeltas(name, content, changeDir string) (*schemas.Change, er
 	whatChangesSection := FindSection(sections, "What Changes")
 
 	if whySection == nil || whySection.Content == "" {
-		return nil, fmt.Errorf("Change must have a Why section")
+		return nil, fmt.Errorf("change must have a Why section")
 	}
 	if whatChangesSection == nil || whatChangesSection.Content == "" {
-		return nil, fmt.Errorf("Change must have a What Changes section")
+		return nil, fmt.Errorf("change must have a What Changes section")
 	}
 
 	simpleDeltas := parseDeltas(whatChangesSection.Content)

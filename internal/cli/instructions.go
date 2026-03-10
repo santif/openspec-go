@@ -8,8 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	coreconfig "github.com/santif/openspec-go/internal/core/config"
 	"github.com/santif/openspec-go/internal/core/artifactgraph"
+	coreconfig "github.com/santif/openspec-go/internal/core/config"
 	"github.com/santif/openspec-go/internal/core/projectconfig"
 	"github.com/santif/openspec-go/internal/utils"
 )
@@ -78,16 +78,17 @@ func runInstructions(cmd *cobra.Command, args []string) error {
 	}
 
 	if artifactID == "apply" {
-		instruction, err := artifactgraph.LoadApplyInstruction(graph, context, rules)
+		var applyInstruction *artifactgraph.EnrichedInstruction
+		applyInstruction, err = artifactgraph.LoadApplyInstruction(graph, context, rules)
 		if err != nil {
 			return err
 		}
 		if jsonOutput {
 			enc := json.NewEncoder(os.Stdout)
 			enc.SetIndent("", "  ")
-			return enc.Encode(instruction)
+			return enc.Encode(applyInstruction)
 		}
-		fmt.Println(instruction.Instruction)
+		fmt.Println(applyInstruction.Instruction)
 		return nil
 	}
 

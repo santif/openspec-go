@@ -46,9 +46,7 @@ func (g *ArtifactGraph) GetArtifact(id string) *Artifact {
 // GetAllArtifacts returns all artifacts in schema order.
 func (g *ArtifactGraph) GetAllArtifacts() []Artifact {
 	result := make([]Artifact, 0, len(g.artifacts))
-	for _, a := range g.schema.Artifacts {
-		result = append(result, a)
-	}
+	result = append(result, g.schema.Artifacts...)
 	return result
 }
 

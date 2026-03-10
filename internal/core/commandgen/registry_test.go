@@ -8,8 +8,8 @@ type mockAdapter struct {
 	skillsDir string
 }
 
-func (m *mockAdapter) GetToolID() string                                         { return m.toolID }
-func (m *mockAdapter) GetSkillsDir() string                                      { return m.skillsDir }
+func (m *mockAdapter) GetToolID() string                                                  { return m.toolID }
+func (m *mockAdapter) GetSkillsDir() string                                               { return m.skillsDir }
 func (m *mockAdapter) GenerateSkills(workflows []string, version string) []CommandContent { return nil }
 func (m *mockAdapter) GenerateCommands(workflows []string) []CommandContent               { return nil }
 

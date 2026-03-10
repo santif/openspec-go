@@ -72,7 +72,7 @@ func (v *Validator) ValidateSpec(filePath string) Report {
 		issues = append(issues, Issue{
 			Level:   LevelError,
 			Path:    "file",
-			Message: enrichTopLevelError(specName, err.Error()),
+			Message: enrichTopLevelError(err.Error()),
 		})
 		return v.createReport(issues)
 	}
@@ -82,7 +82,7 @@ func (v *Validator) ValidateSpec(filePath string) Report {
 		issues = append(issues, Issue{
 			Level:   LevelError,
 			Path:    "file",
-			Message: enrichTopLevelError(specName, err.Error()),
+			Message: enrichTopLevelError(err.Error()),
 		})
 		return v.createReport(issues)
 	}
@@ -101,7 +101,7 @@ func (v *Validator) ValidateSpecContent(specName, content string) Report {
 		issues = append(issues, Issue{
 			Level:   LevelError,
 			Path:    "file",
-			Message: enrichTopLevelError(specName, err.Error()),
+			Message: enrichTopLevelError(err.Error()),
 		})
 		return v.createReport(issues)
 	}
@@ -121,7 +121,7 @@ func (v *Validator) ValidateChange(filePath string) Report {
 		issues = append(issues, Issue{
 			Level:   LevelError,
 			Path:    "file",
-			Message: enrichTopLevelError(changeName, err.Error()),
+			Message: enrichTopLevelError(err.Error()),
 		})
 		return v.createReport(issues)
 	}
@@ -132,7 +132,7 @@ func (v *Validator) ValidateChange(filePath string) Report {
 		issues = append(issues, Issue{
 			Level:   LevelError,
 			Path:    "file",
-			Message: enrichTopLevelError(changeName, err.Error()),
+			Message: enrichTopLevelError(err.Error()),
 		})
 		return v.createReport(issues)
 	}
@@ -161,7 +161,7 @@ func (v *Validator) ValidateChangeDeltaSpecs(changeDir string) Report {
 		issues = append(issues, Issue{
 			Level:   LevelError,
 			Path:    "file",
-			Message: enrichTopLevelError("change", Messages.ChangeNoDeltas),
+			Message: enrichTopLevelError(Messages.ChangeNoDeltas),
 		})
 		return v.createReport(issues)
 	}
@@ -326,7 +326,7 @@ func (v *Validator) ValidateChangeDeltaSpecs(changeDir string) Report {
 		issues = append(issues, Issue{
 			Level:   LevelError,
 			Path:    "file",
-			Message: enrichTopLevelError("change", Messages.ChangeNoDeltas),
+			Message: enrichTopLevelError(Messages.ChangeNoDeltas),
 		})
 	}
 
@@ -444,15 +444,15 @@ func extractNameFromPath(filePath string) string {
 	return fileName
 }
 
-func enrichTopLevelError(itemID, baseMessage string) string {
+func enrichTopLevelError(baseMessage string) string {
 	msg := strings.TrimSpace(baseMessage)
 	if msg == Messages.ChangeNoDeltas {
 		return msg + ". " + Messages.GuideNoDeltas
 	}
-	if strings.Contains(msg, "Spec must have a Purpose section") || strings.Contains(msg, "Spec must have a Requirements section") {
+	if strings.Contains(msg, "spec must have a Purpose section") || strings.Contains(msg, "spec must have a Requirements section") {
 		return msg + ". " + Messages.GuideMissingSpecSections
 	}
-	if strings.Contains(msg, "Change must have a Why section") || strings.Contains(msg, "Change must have a What Changes section") {
+	if strings.Contains(msg, "change must have a Why section") || strings.Contains(msg, "change must have a What Changes section") {
 		return msg + ". " + Messages.GuideMissingChangeSections
 	}
 	return msg

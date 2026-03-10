@@ -58,14 +58,14 @@ var LegacySlashCommandPaths = map[string]LegacySlashCommandPattern{
 
 // LegacyDetectionResult holds the results of scanning for legacy artifacts.
 type LegacyDetectionResult struct {
-	ConfigFiles             []string
-	ConfigFilesToUpdate     []string
-	SlashCommandDirs        []string
-	SlashCommandFiles       []string
-	HasOpenspecAgents       bool
-	HasProjectMd            bool
+	ConfigFiles              []string
+	ConfigFilesToUpdate      []string
+	SlashCommandDirs         []string
+	SlashCommandFiles        []string
+	HasOpenspecAgents        bool
+	HasProjectMd             bool
 	HasRootAgentsWithMarkers bool
-	HasLegacyArtifacts      bool
+	HasLegacyArtifacts       bool
 }
 
 // CleanupResult holds the results of a cleanup operation.

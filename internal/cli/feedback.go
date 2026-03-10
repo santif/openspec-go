@@ -46,7 +46,7 @@ func runFeedback(cmd *cobra.Command, args []string) error {
 	c := exec.Command("gh", ghArgs...)
 	output, err := c.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to create issue: %s\n%s", err, strings.TrimSpace(string(output)))
+		return fmt.Errorf("failed to create issue: %w\n%s", err, strings.TrimSpace(string(output)))
 	}
 
 	fmt.Printf("Done: %s\n", strings.TrimSpace(string(output)))

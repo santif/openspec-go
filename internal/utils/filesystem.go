@@ -54,7 +54,7 @@ func UpdateFileWithMarkers(filePath, content, startMarker, endMarker string) err
 		existingContent = data
 
 		startIndex := findMarkerIndex(existingContent, startMarker, 0)
-		endIndex := -1
+		var endIndex int
 		if startIndex != -1 {
 			endIndex = findMarkerIndex(existingContent, endMarker, startIndex+len(startMarker))
 		} else {
@@ -85,7 +85,7 @@ func UpdateFileWithMarkers(filePath, content, startMarker, endMarker string) err
 // content unchanged if markers are not found or invalid.
 func RemoveMarkerBlock(content, startMarker, endMarker string) string {
 	startIndex := findMarkerIndex(content, startMarker, 0)
-	endIndex := -1
+	var endIndex int
 	if startIndex != -1 {
 		endIndex = findMarkerIndex(content, endMarker, startIndex+len(startMarker))
 	} else {
