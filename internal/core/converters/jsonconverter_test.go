@@ -126,3 +126,132 @@ func TestExtractNameFromPath(t *testing.T) {
 		}
 	}
 }
+
+func TestConvertSpecToJSON_ParseError(t *testing.T) {
+	dir := t.TempDir()
+	specDir := filepath.Join(dir, "openspec", "specs", "bad")
+	if err := os.MkdirAll(specDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	specPath := filepath.Join(specDir, "spec.md")
+	if err := os.WriteFile(specPath, []byte("No valid sections here"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := ConvertSpecToJSON(specPath)
+	if err == nil {
+		t.Error("expected error for unparseable spec")
+	}
+}
+
+func TestConvertChangeToJSON_ParseError(t *testing.T) {
+	dir := t.TempDir()
+	changeDir := filepath.Join(dir, "openspec", "changes", "bad")
+	if err := os.MkdirAll(changeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	changePath := filepath.Join(changeDir, "proposal.md")
+	if err := os.WriteFile(changePath, []byte("No valid sections"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := ConvertChangeToJSON(changePath)
+	if err == nil {
+		t.Error("expected error for unparseable change")
+	}
+}
+
+func TestConvertSpecToJSON_MetadataPopulated(t *testing.T) {
+	dir := t.TempDir()
+	specDir := filepath.Join(dir, "openspec", "specs", "billing")
+	if err := os.MkdirAll(specDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	specContent := `## Purpose
+Handle billing and payments for all users.
+
+## Requirements
+
+### Requirement: Payment Processing
+The system SHALL process payments securely.
+
+#### Scenario: Successful payment
+Given a valid credit card, the payment is processed.
+`
+	specPath := filepath.Join(specDir, "spec.md")
+	if err := os.WriteFile(specPath, []byte(specContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := ConvertSpecToJSON(specPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var spec schemas.Spec
+	if err := json.Unmarshal([]byte(result), &spec); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+
+	if spec.Name != "billing" {
+		t.Errorf("expected name 'billing', got %q", spec.Name)
+	}
+	if spec.Metadata == nil {
+		t.Fatal("expected metadata to be populated")
+	}
+	if spec.Metadata.SourcePath != specPath {
+		t.Errorf("expected sourcePath %q, got %q", specPath, spec.Metadata.SourcePath)
+	}
+}
+
+func TestConvertChangeToJSON_WithDeltas(t *testing.T) {
+	dir := t.TempDir()
+	changeDir := filepath.Join(dir, "openspec", "changes", "add-billing")
+	specsDir := filepath.Join(changeDir, "specs", "billing")
+	if err := os.MkdirAll(specsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	changeContent := `## Why
+We need billing capabilities for the platform.
+
+## What Changes
+- **billing:** Add billing and payment processing capabilities
+`
+	changePath := filepath.Join(changeDir, "proposal.md")
+	if err := os.WriteFile(changePath, []byte(changeContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	deltaContent := `## ADDED Requirements
+
+### Requirement: Payment
+The system SHALL process payments.
+
+#### Scenario: Payment success
+Given valid payment info, process the payment.
+`
+	if err := os.WriteFile(filepath.Join(specsDir, "spec.md"), []byte(deltaContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := ConvertChangeToJSON(changePath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var change schemas.Change
+	if err := json.Unmarshal([]byte(result), &change); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+
+	if change.Name != "add-billing" {
+		t.Errorf("expected name 'add-billing', got %q", change.Name)
+	}
+	if len(change.Deltas) == 0 {
+		t.Error("expected at least one delta")
+	}
+}

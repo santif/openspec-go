@@ -351,3 +351,190 @@ func TestGetToolsFromLegacyArtifacts(t *testing.T) {
 		t.Error("expected 'cursor' in tools")
 	}
 }
+
+func TestGetToolsFromLegacyArtifacts_Empty(t *testing.T) {
+	detection := &LegacyDetectionResult{}
+	tools := GetToolsFromLegacyArtifacts(detection)
+	if len(tools) != 0 {
+		t.Errorf("expected no tools, got %v", tools)
+	}
+}
+
+func TestCleanupLegacyArtifacts_ErrorReadingConfigFile(t *testing.T) {
+	dir := t.TempDir()
+
+	// Point to a config file that doesn't exist anymore
+	detection := &LegacyDetectionResult{
+		ConfigFilesToUpdate: []string{"nonexistent.md"},
+	}
+
+	result, err := CleanupLegacyArtifacts(dir, detection)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(result.Errors) != 1 {
+		t.Errorf("expected 1 error, got %d: %v", len(result.Errors), result.Errors)
+	}
+	if !strings.Contains(result.Errors[0], "Failed to read") {
+		t.Errorf("expected read error, got: %s", result.Errors[0])
+	}
+}
+
+func TestCleanupLegacyArtifacts_ErrorDeletingFile(t *testing.T) {
+	dir := t.TempDir()
+
+	// Point to a file that doesn't exist
+	detection := &LegacyDetectionResult{
+		SlashCommandFiles: []string{"nonexistent/file.md"},
+	}
+
+	result, err := CleanupLegacyArtifacts(dir, detection)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(result.Errors) != 1 {
+		t.Errorf("expected 1 error, got %d: %v", len(result.Errors), result.Errors)
+	}
+}
+
+func TestCleanupLegacyArtifacts_ProjectMdMigration(t *testing.T) {
+	dir := t.TempDir()
+
+	detection := &LegacyDetectionResult{
+		HasProjectMd: true,
+	}
+
+	result, err := CleanupLegacyArtifacts(dir, detection)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !result.ProjectMdNeedsMigration {
+		t.Error("expected ProjectMdNeedsMigration to be true")
+	}
+}
+
+func TestFormatCleanupSummary_WithErrors(t *testing.T) {
+	result := &CleanupResult{
+		Errors: []string{"Failed to delete something"},
+	}
+
+	summary := FormatCleanupSummary(result)
+	if !strings.Contains(summary, "Errors during cleanup") {
+		t.Error("expected errors section in summary")
+	}
+	if !strings.Contains(summary, "Warning:") {
+		t.Error("expected Warning prefix for errors")
+	}
+}
+
+func TestFormatCleanupSummary_WithProjectMdMigration(t *testing.T) {
+	result := &CleanupResult{
+		DeletedFiles:            []string{"file.md"},
+		ProjectMdNeedsMigration: true,
+	}
+
+	summary := FormatCleanupSummary(result)
+	if !strings.Contains(summary, "project.md") {
+		t.Error("expected project.md migration hint")
+	}
+	if !strings.Contains(summary, "config.yaml") {
+		t.Error("expected config.yaml mention in migration hint")
+	}
+}
+
+func TestFormatCleanupSummary_Empty(t *testing.T) {
+	result := &CleanupResult{}
+	summary := FormatCleanupSummary(result)
+	if summary != "" {
+		t.Errorf("expected empty summary, got %q", summary)
+	}
+}
+
+func TestDetectLegacyArtifacts_RootAgentsWithMarkers(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create root AGENTS.md with markers
+	agentsContent := "Before\n" + config.OpenSpecMarkers.Start + "\nOpenSpec content\n" + config.OpenSpecMarkers.End + "\nAfter"
+	if err := os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte(agentsContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := DetectLegacyArtifacts(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !result.HasRootAgentsWithMarkers {
+		t.Error("expected HasRootAgentsWithMarkers to be true")
+	}
+	if !result.HasLegacyArtifacts {
+		t.Error("expected HasLegacyArtifacts to be true")
+	}
+	// AGENTS.md is also in LegacyConfigFiles, so it should show up as a ConfigFile too
+	foundConfig := false
+	for _, f := range result.ConfigFiles {
+		if f == "AGENTS.md" {
+			foundConfig = true
+			break
+		}
+	}
+	if !foundConfig {
+		t.Error("expected AGENTS.md in ConfigFiles")
+	}
+}
+
+func TestDetectLegacyArtifacts_MultipleSlashCommandFiles(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create multiple file-based legacy commands for different tools
+	cursorDir := filepath.Join(dir, ".cursor", "commands")
+	if err := os.MkdirAll(cursorDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cursorDir, "openspec-explore.md"), []byte("content"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cursorDir, "openspec-propose.md"), []byte("content"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := DetectLegacyArtifacts(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(result.SlashCommandFiles) < 2 {
+		t.Errorf("expected at least 2 slash command files, got %d: %v", len(result.SlashCommandFiles), result.SlashCommandFiles)
+	}
+}
+
+func TestFormatDetectionSummary_OnlyConfigFiles(t *testing.T) {
+	detection := &LegacyDetectionResult{
+		ConfigFilesToUpdate: []string{"CLAUDE.md", "CLINE.md"},
+	}
+
+	summary := FormatDetectionSummary(detection)
+	if !strings.Contains(summary, "Files to update") {
+		t.Error("expected 'Files to update' section")
+	}
+	if !strings.Contains(summary, "CLAUDE.md") {
+		t.Error("expected CLAUDE.md in summary")
+	}
+	if !strings.Contains(summary, "CLINE.md") {
+		t.Error("expected CLINE.md in summary")
+	}
+}
+
+func TestFormatDetectionSummary_OnlyProjectMd(t *testing.T) {
+	detection := &LegacyDetectionResult{
+		HasProjectMd: true,
+	}
+
+	summary := FormatDetectionSummary(detection)
+	if !strings.Contains(summary, "project.md") {
+		t.Error("expected project.md migration hint")
+	}
+}
