@@ -203,3 +203,58 @@ func TestGetGlobalDataDir_RespectsXDG(t *testing.T) {
 		t.Errorf("expected path to start with XDG_DATA_HOME %q, got %q", customDir, result)
 	}
 }
+
+func TestGetGlobalConfigDir_FallbackToHome(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	result := GetGlobalConfigDir()
+
+	if !strings.Contains(result, filepath.Join(".config", GlobalConfigDirName)) {
+		t.Errorf("expected path containing '.config/%s', got %q", GlobalConfigDirName, result)
+	}
+}
+
+func TestGetGlobalDataDir_FallbackToHome(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", "")
+
+	result := GetGlobalDataDir()
+
+	if !strings.Contains(result, filepath.Join(".local", "share", GlobalDataDirName)) {
+		t.Errorf("expected path containing '.local/share/%s', got %q", GlobalDataDirName, result)
+	}
+}
+
+func TestGetGlobalConfig_MergesFeatureFlags(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	configDir := filepath.Join(dir, GlobalConfigDirName)
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := GlobalConfig{
+		Profile:      ProfileCore,
+		Delivery:     DeliveryBoth,
+		FeatureFlags: map[string]bool{"experimental": true, "legacy": false},
+	}
+	data, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, GlobalConfigFileName), data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded := GetGlobalConfig()
+
+	if len(loaded.FeatureFlags) != 2 {
+		t.Fatalf("expected 2 feature flags, got %d: %v", len(loaded.FeatureFlags), loaded.FeatureFlags)
+	}
+	if !loaded.FeatureFlags["experimental"] {
+		t.Error("expected 'experimental' feature flag to be true")
+	}
+	if loaded.FeatureFlags["legacy"] {
+		t.Error("expected 'legacy' feature flag to be false")
+	}
+}
