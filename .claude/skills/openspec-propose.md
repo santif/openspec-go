@@ -6,7 +6,7 @@ compatibility: Requires openspec CLI.
 metadata:
   author: openspec
   version: "1.0"
-  generatedBy: "edd0c86-dirty"
+  generatedBy: "0.1.2"
 ---
 
 Propose a new change - create the change and generate all artifacts in one step.
