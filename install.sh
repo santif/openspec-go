@@ -97,8 +97,11 @@ main() {
 
     say "Checksum verified."
 
-    # Extract binary
-    tar -xzf "${WORK_DIR}/${ARCHIVE}" -C "${WORK_DIR}" "${BINARY}"
+    # Extract archive contents
+    tar -xzf "${WORK_DIR}/${ARCHIVE}" -C "${WORK_DIR}"
+    if [ ! -f "${WORK_DIR}/${BINARY}" ]; then
+        err "Binary '${BINARY}' not found in archive"
+    fi
 
     # Determine install directory
     INSTALL_DIR="/usr/local/bin"
@@ -108,6 +111,7 @@ main() {
         USE_SUDO=""
     elif command -v sudo >/dev/null 2>&1; then
         USE_SUDO="sudo"
+        sudo mkdir -p "$INSTALL_DIR"
         say "Installing to ${INSTALL_DIR} (requires sudo)..."
     else
         INSTALL_DIR="${HOME}/.local/bin"
