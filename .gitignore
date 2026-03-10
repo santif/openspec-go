@@ -30,6 +30,9 @@ dist/
 # Worktrees
 .worktrees/
 
+# Serena
+.serena/
+
 # OS
 .DS_Store
 Thumbs.db
