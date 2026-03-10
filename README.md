@@ -42,6 +42,12 @@ openspec archive add-user-auth
 
 ## Installation
 
+### Quick install (Linux / macOS)
+
+```bash
+curl -sSL https://raw.githubusercontent.com/santif/openspec-go/main/install.sh | sh
+```
+
 ### From source
 
 ```bash
