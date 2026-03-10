@@ -3,6 +3,7 @@ package utils
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -211,5 +212,69 @@ func TestUpdateFileWithMarkers_Idempotent(t *testing.T) {
 
 	if first != second {
 		t.Errorf("expected idempotent result\nfirst:  %q\nsecond: %q", first, second)
+	}
+}
+
+func TestUpdateFileWithMarkers_EndBeforeStart(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "test.txt")
+
+	// End marker before start marker — should error
+	if err := WriteFile(file, "<!-- END -->\nsome content\n<!-- START -->"); err != nil {
+		t.Fatal(err)
+	}
+
+	err := UpdateFileWithMarkers(file, "new", "<!-- START -->", "<!-- END -->")
+	if err == nil {
+		t.Error("expected error when end marker appears before start marker")
+	}
+}
+
+func TestDetectShell_WithSHELLEnv(t *testing.T) {
+	t.Setenv("SHELL", "/bin/zsh")
+	result := DetectShell()
+	if result != "zsh" {
+		t.Errorf("expected 'zsh', got %q", result)
+	}
+}
+
+func TestDetectShell_EmptySHELL(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fallback shell differs on Windows")
+	}
+	t.Setenv("SHELL", "")
+	result := DetectShell()
+	// On non-Windows, should fall back to "bash"
+	if result != "bash" {
+		t.Errorf("expected 'bash' fallback, got %q", result)
+	}
+}
+
+func TestWriteFile_CreatesParentDirs(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "deeply", "nested", "dir", "file.txt")
+
+	if err := WriteFile(file, "content"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	data, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatalf("failed to read file: %v", err)
+	}
+	if string(data) != "content" {
+		t.Errorf("expected 'content', got %q", string(data))
+	}
+}
+
+func TestReadChangeMetadata_InvalidYAML(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".openspec.yaml"), []byte("invalid: yaml: [broken"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := ReadChangeMetadata(dir)
+	if err == nil {
+		t.Error("expected error for invalid YAML")
 	}
 }

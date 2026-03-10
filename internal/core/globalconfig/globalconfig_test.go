@@ -258,3 +258,168 @@ func TestGetGlobalConfig_MergesFeatureFlags(t *testing.T) {
 		t.Error("expected 'legacy' feature flag to be false")
 	}
 }
+
+func TestGetGlobalConfig_MergesWorkflows(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	configDir := filepath.Join(dir, GlobalConfigDirName)
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	partial := `{"workflows":["propose","explore"]}`
+	if err := os.WriteFile(filepath.Join(configDir, GlobalConfigFileName), []byte(partial), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := GetGlobalConfig()
+
+	if len(cfg.Workflows) != 2 {
+		t.Fatalf("expected 2 workflows, got %d", len(cfg.Workflows))
+	}
+	if cfg.Workflows[0] != "propose" || cfg.Workflows[1] != "explore" {
+		t.Errorf("unexpected workflows: %v", cfg.Workflows)
+	}
+	// Defaults should still be applied for other fields
+	if cfg.Profile != ProfileCore {
+		t.Errorf("expected default profile %q, got %q", ProfileCore, cfg.Profile)
+	}
+}
+
+func TestGetGlobalConfig_MergesDelivery(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	configDir := filepath.Join(dir, GlobalConfigDirName)
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	partial := `{"delivery":"skills"}`
+	if err := os.WriteFile(filepath.Join(configDir, GlobalConfigFileName), []byte(partial), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := GetGlobalConfig()
+
+	if cfg.Delivery != DeliverySkills {
+		t.Errorf("expected delivery %q, got %q", DeliverySkills, cfg.Delivery)
+	}
+	if cfg.Profile != ProfileCore {
+		t.Errorf("expected default profile, got %q", cfg.Profile)
+	}
+}
+
+func TestSaveGlobalConfig_FileEndsWithNewline(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	cfg := GlobalConfig{
+		Profile:      ProfileCore,
+		Delivery:     DeliveryBoth,
+		FeatureFlags: map[string]bool{},
+	}
+
+	if err := SaveGlobalConfig(cfg); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	configPath := filepath.Join(dir, GlobalConfigDirName, GlobalConfigFileName)
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("failed to read config: %v", err)
+	}
+
+	if len(data) == 0 {
+		t.Fatal("config file is empty")
+	}
+	if data[len(data)-1] != '\n' {
+		t.Error("expected config file to end with newline")
+	}
+}
+
+func TestSaveGlobalConfig_ValidJSON(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	cfg := GlobalConfig{
+		Profile:      ProfileCustom,
+		Delivery:     DeliveryCommands,
+		FeatureFlags: map[string]bool{"a": true},
+		Workflows:    []string{"explore"},
+	}
+
+	if err := SaveGlobalConfig(cfg); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	configPath := filepath.Join(dir, GlobalConfigDirName, GlobalConfigFileName)
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("failed to read config: %v", err)
+	}
+
+	var parsed map[string]interface{}
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("saved config is not valid JSON: %v", err)
+	}
+
+	// Verify indentation (should be 2 spaces)
+	if !strings.Contains(string(data), "  \"") {
+		t.Error("expected JSON to be indented with 2 spaces")
+	}
+}
+
+func TestGetGlobalConfigPath(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	path := GetGlobalConfigPath()
+	expected := filepath.Join(dir, GlobalConfigDirName, GlobalConfigFileName)
+	if path != expected {
+		t.Errorf("expected %q, got %q", expected, path)
+	}
+}
+
+func TestCopyDefault_ReturnsIndependentCopy(t *testing.T) {
+	a := copyDefault()
+	b := copyDefault()
+
+	a.FeatureFlags["test"] = true
+	if b.FeatureFlags["test"] {
+		t.Error("modifying one copy should not affect the other")
+	}
+
+	a.Profile = ProfileCustom
+	if a.Profile != ProfileCustom {
+		t.Error("expected profile to be set to ProfileCustom")
+	}
+	if b.Profile != ProfileCore {
+		t.Error("modifying profile on one copy should not affect the other")
+	}
+}
+
+func TestGetGlobalConfig_EmptyFile(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	configDir := filepath.Join(dir, GlobalConfigDirName)
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Empty JSON object should merge with defaults
+	if err := os.WriteFile(filepath.Join(configDir, GlobalConfigFileName), []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := GetGlobalConfig()
+
+	if cfg.Profile != ProfileCore {
+		t.Errorf("expected default profile %q, got %q", ProfileCore, cfg.Profile)
+	}
+	if cfg.Delivery != DeliveryBoth {
+		t.Errorf("expected default delivery %q, got %q", DeliveryBoth, cfg.Delivery)
+	}
+}
