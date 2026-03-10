@@ -242,6 +242,152 @@ func TestReadProjectConfig_ContextSizeLimit(t *testing.T) {
 	}
 }
 
+func TestReadProjectConfig_ParsesKeywords(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "openspec")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	content := `schema: spec-driven
+keywords:
+  normative: ["DEBE", "DEBERA"]
+`
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	config := ReadProjectConfig(dir)
+	if config == nil {
+		t.Fatal("expected non-nil config")
+	}
+	if config.Keywords == nil {
+		t.Fatal("expected non-nil Keywords")
+	}
+	if len(config.Keywords.Normative) != 2 {
+		t.Fatalf("expected 2 normative keywords, got %d", len(config.Keywords.Normative))
+	}
+	if config.Keywords.Normative[0] != "DEBE" || config.Keywords.Normative[1] != "DEBERA" {
+		t.Errorf("unexpected keywords: %v", config.Keywords.Normative)
+	}
+}
+
+func TestReadProjectConfig_KeywordsAbsent(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "openspec")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	content := `schema: spec-driven
+`
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	config := ReadProjectConfig(dir)
+	if config == nil {
+		t.Fatal("expected non-nil config")
+	}
+	if config.Keywords != nil {
+		t.Errorf("expected nil Keywords when not in config, got %+v", config.Keywords)
+	}
+}
+
+func TestReadProjectConfig_KeywordsEmpty(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "openspec")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	content := `schema: spec-driven
+keywords:
+  normative: []
+`
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	config := ReadProjectConfig(dir)
+	if config == nil {
+		t.Fatal("expected non-nil config")
+	}
+	if config.Keywords == nil {
+		t.Fatal("expected non-nil Keywords even with empty list")
+	}
+	if len(config.Keywords.Normative) != 0 {
+		t.Errorf("expected empty normative list, got %v", config.Keywords.Normative)
+	}
+}
+
+func TestReadProjectConfig_KeywordsWithAccents(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "openspec")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	content := `schema: spec-driven
+keywords:
+  normative: ["DEBERÁ", "DEBE"]
+`
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	config := ReadProjectConfig(dir)
+	if config == nil {
+		t.Fatal("expected non-nil config")
+	}
+	if config.Keywords == nil {
+		t.Fatal("expected non-nil Keywords")
+	}
+	if len(config.Keywords.Normative) != 2 {
+		t.Fatalf("expected 2 normative keywords, got %d", len(config.Keywords.Normative))
+	}
+	if config.Keywords.Normative[0] != "DEBERÁ" {
+		t.Errorf("expected 'DEBERÁ', got %q", config.Keywords.Normative[0])
+	}
+}
+
+func TestValidateKeywords_Valid(t *testing.T) {
+	kw := &KeywordsConfig{Normative: []string{"DEBE", "DEBERA"}}
+	warnings := ValidateKeywords(kw)
+	if len(warnings) != 0 {
+		t.Errorf("expected no warnings, got: %v", warnings)
+	}
+}
+
+func TestValidateKeywords_Nil(t *testing.T) {
+	warnings := ValidateKeywords(nil)
+	if len(warnings) != 0 {
+		t.Errorf("expected no warnings for nil, got: %v", warnings)
+	}
+}
+
+func TestValidateKeywords_Empty(t *testing.T) {
+	kw := &KeywordsConfig{Normative: []string{}}
+	warnings := ValidateKeywords(kw)
+	if len(warnings) != 1 {
+		t.Fatalf("expected 1 warning, got %d: %v", len(warnings), warnings)
+	}
+	if !strings.Contains(warnings[0], "empty") {
+		t.Errorf("expected warning about empty list, got: %s", warnings[0])
+	}
+}
+
+func TestValidateKeywords_RegexMetachars(t *testing.T) {
+	kw := &KeywordsConfig{Normative: []string{"MUST(not)"}}
+	warnings := ValidateKeywords(kw)
+	if len(warnings) != 1 {
+		t.Fatalf("expected 1 warning, got %d: %v", len(warnings), warnings)
+	}
+	if !strings.Contains(warnings[0], "regex metacharacters") {
+		t.Errorf("expected warning about metacharacters, got: %s", warnings[0])
+	}
+}
+
 func TestValidateConfigRules_ValidArtifactIDs(t *testing.T) {
 	rules := map[string][]string{
 		"proposal": {"Rule 1"},

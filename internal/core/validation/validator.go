@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/santif/openspec-go/internal/core/parsers"
@@ -12,12 +13,54 @@ import (
 	"github.com/santif/openspec-go/internal/utils"
 )
 
+var defaultNormativeKeywords = []string{"SHALL", "MUST"}
+
 type Validator struct {
-	StrictMode bool
+	StrictMode        bool
+	normativeKeywords []string
+	normativeRegex    *regexp.Regexp
 }
 
 func NewValidator(strict bool) *Validator {
-	return &Validator{StrictMode: strict}
+	return NewValidatorWithKeywords(strict, nil)
+}
+
+func NewValidatorWithKeywords(strict bool, keywords []string) *Validator {
+	if len(keywords) == 0 {
+		keywords = defaultNormativeKeywords
+	}
+	v := &Validator{
+		StrictMode:        strict,
+		normativeKeywords: keywords,
+		normativeRegex:    buildNormativeRegex(keywords),
+	}
+	return v
+}
+
+// buildNormativeRegex builds a regex that matches any of the given keywords
+// using explicit context-based boundaries (not \b) for Unicode safety.
+func buildNormativeRegex(keywords []string) *regexp.Regexp {
+	// Sort longest-first so longer keywords match before shorter prefixes
+	sorted := make([]string, len(keywords))
+	copy(sorted, keywords)
+	sort.Slice(sorted, func(i, j int) bool {
+		return len(sorted[i]) > len(sorted[j])
+	})
+
+	var escaped []string
+	for _, kw := range sorted {
+		escaped = append(escaped, regexp.QuoteMeta(kw))
+	}
+	pattern := `(?:^|[\s,;.!?()])(?:` + strings.Join(escaped, "|") + `)(?:$|[\s,;.!?()])`
+	return regexp.MustCompile(pattern)
+}
+
+func (v *Validator) containsNormativeKeyword(text string) bool {
+	return v.normativeRegex.MatchString(text)
+}
+
+func (v *Validator) requirementNoKeywordMessage() string {
+	return "Requirement must contain " + strings.Join(v.normativeKeywords, " or ") + " keyword"
 }
 
 func (v *Validator) ValidateSpec(filePath string) Report {
@@ -44,7 +87,7 @@ func (v *Validator) ValidateSpec(filePath string) Report {
 		return v.createReport(issues)
 	}
 
-	issues = append(issues, validateSpecSchema(spec)...)
+	issues = append(issues, v.validateSpecSchema(spec)...)
 	issues = append(issues, applySpecRules(spec)...)
 
 	return v.createReport(issues)
@@ -63,7 +106,7 @@ func (v *Validator) ValidateSpecContent(specName, content string) Report {
 		return v.createReport(issues)
 	}
 
-	issues = append(issues, validateSpecSchema(spec)...)
+	issues = append(issues, v.validateSpecSchema(spec)...)
 	issues = append(issues, applySpecRules(spec)...)
 
 	return v.createReport(issues)
@@ -181,8 +224,8 @@ func (v *Validator) ValidateChangeDeltaSpecs(changeDir string) Report {
 			reqText := extractRequirementText(block.Raw)
 			if reqText == "" {
 				issues = append(issues, Issue{Level: LevelError, Path: entryPath, Message: fmt.Sprintf("ADDED %q is missing requirement text", block.Name)})
-			} else if !containsShallOrMust(reqText) {
-				issues = append(issues, Issue{Level: LevelError, Path: entryPath, Message: fmt.Sprintf("ADDED %q must contain SHALL or MUST", block.Name)})
+			} else if !v.containsNormativeKeyword(reqText) {
+				issues = append(issues, Issue{Level: LevelError, Path: entryPath, Message: fmt.Sprintf("ADDED %q must contain %s", block.Name, strings.Join(v.normativeKeywords, " or "))})
 			}
 			if countScenarios(block.Raw) < 1 {
 				issues = append(issues, Issue{Level: LevelError, Path: entryPath, Message: fmt.Sprintf("ADDED %q must include at least one scenario", block.Name)})
@@ -201,8 +244,8 @@ func (v *Validator) ValidateChangeDeltaSpecs(changeDir string) Report {
 			reqText := extractRequirementText(block.Raw)
 			if reqText == "" {
 				issues = append(issues, Issue{Level: LevelError, Path: entryPath, Message: fmt.Sprintf("MODIFIED %q is missing requirement text", block.Name)})
-			} else if !containsShallOrMust(reqText) {
-				issues = append(issues, Issue{Level: LevelError, Path: entryPath, Message: fmt.Sprintf("MODIFIED %q must contain SHALL or MUST", block.Name)})
+			} else if !v.containsNormativeKeyword(reqText) {
+				issues = append(issues, Issue{Level: LevelError, Path: entryPath, Message: fmt.Sprintf("MODIFIED %q must contain %s", block.Name, strings.Join(v.normativeKeywords, " or "))})
 			}
 			if countScenarios(block.Raw) < 1 {
 				issues = append(issues, Issue{Level: LevelError, Path: entryPath, Message: fmt.Sprintf("MODIFIED %q must include at least one scenario", block.Name)})
@@ -291,7 +334,7 @@ func (v *Validator) ValidateChangeDeltaSpecs(changeDir string) Report {
 }
 
 // Schema validation (replaces Zod)
-func validateSpecSchema(spec *schemas.Spec) []Issue {
+func (v *Validator) validateSpecSchema(spec *schemas.Spec) []Issue {
 	var issues []Issue
 	if spec.Name == "" {
 		issues = append(issues, Issue{Level: LevelError, Path: "name", Message: Messages.SpecNameEmpty})
@@ -305,8 +348,8 @@ func validateSpecSchema(spec *schemas.Spec) []Issue {
 	for i, req := range spec.Requirements {
 		if req.Text == "" {
 			issues = append(issues, Issue{Level: LevelError, Path: fmt.Sprintf("requirements[%d].text", i), Message: Messages.RequirementEmpty})
-		} else if !containsShallOrMust(req.Text) {
-			issues = append(issues, Issue{Level: LevelError, Path: fmt.Sprintf("requirements[%d].text", i), Message: Messages.RequirementNoShall})
+		} else if !v.containsNormativeKeyword(req.Text) {
+			issues = append(issues, Issue{Level: LevelError, Path: fmt.Sprintf("requirements[%d].text", i), Message: v.requirementNoKeywordMessage()})
 		}
 		if len(req.Scenarios) == 0 {
 			issues = append(issues, Issue{Level: LevelError, Path: fmt.Sprintf("requirements[%d].scenarios", i), Message: Messages.RequirementNoScenarios})
@@ -413,12 +456,6 @@ func enrichTopLevelError(itemID, baseMessage string) string {
 		return msg + ". " + Messages.GuideMissingChangeSections
 	}
 	return msg
-}
-
-var shallMustRegex = regexp.MustCompile(`\b(SHALL|MUST)\b`)
-
-func containsShallOrMust(text string) bool {
-	return shallMustRegex.MatchString(text)
 }
 
 var scenarioHeaderRegex = regexp.MustCompile(`(?m)^####\s+`)

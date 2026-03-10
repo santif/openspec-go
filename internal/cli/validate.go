@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/santif/openspec-go/internal/core/config"
+	"github.com/santif/openspec-go/internal/core/projectconfig"
 	"github.com/santif/openspec-go/internal/core/validation"
 	"github.com/santif/openspec-go/internal/utils"
 )
@@ -51,7 +52,12 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no openspec directory found. Run 'openspec init' first")
 	}
 
-	v := validation.NewValidator(strict)
+	// Read project config for custom keywords
+	var keywords []string
+	if cfg := projectconfig.ReadProjectConfig(projectRoot); cfg != nil && cfg.Keywords != nil {
+		keywords = cfg.Keywords.Normative
+	}
+	v := validation.NewValidatorWithKeywords(strict, keywords)
 	var results []validationResult
 
 	if len(args) > 0 {

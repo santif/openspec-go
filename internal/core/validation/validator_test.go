@@ -416,6 +416,220 @@ The system SHALL allow login.
 	}
 }
 
+func TestNewValidatorWithKeywords_CustomKeywords(t *testing.T) {
+	v := NewValidatorWithKeywords(false, []string{"DEBE", "DEBERA"})
+	report := v.ValidateSpecContent("test", `## Purpose
+A comprehensive authentication and authorization system that manages user access.
+
+## Requirements
+
+### Requirement: Login
+El sistema DEBE permitir el acceso con credenciales válidas.
+
+#### Scenario: Successful login
+- **WHEN** user enters valid username and password
+- **THEN** system grants access
+`)
+
+	if !report.Valid {
+		t.Errorf("expected valid report with custom keyword DEBE, got issues: %v", report.Issues)
+	}
+}
+
+func TestNewValidatorWithKeywords_CustomKeywordsFail(t *testing.T) {
+	v := NewValidatorWithKeywords(false, []string{"DEBE", "DEBERA"})
+	report := v.ValidateSpecContent("test", `## Purpose
+A comprehensive authentication and authorization system that manages user access.
+
+## Requirements
+
+### Requirement: Login
+The system allows login with valid credentials.
+
+#### Scenario: Successful login
+- **WHEN** user enters valid username and password
+- **THEN** system grants access
+`)
+
+	if report.Valid {
+		t.Error("expected invalid report when custom keywords are missing")
+	}
+	found := false
+	for _, issue := range report.Issues {
+		if strings.Contains(issue.Message, "DEBE") && strings.Contains(issue.Message, "DEBERA") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected error message to mention DEBE and DEBERA")
+	}
+}
+
+func TestNewValidatorWithKeywords_NilFallsBackToDefaults(t *testing.T) {
+	v := NewValidatorWithKeywords(false, nil)
+	report := v.ValidateSpecContent("test", `## Purpose
+A comprehensive authentication and authorization system that manages user access.
+
+## Requirements
+
+### Requirement: Login
+The system SHALL authenticate users.
+
+#### Scenario: Valid credentials
+- **WHEN** user provides valid credentials
+- **THEN** system authenticates them
+`)
+
+	if !report.Valid {
+		t.Errorf("expected valid report with default keywords, got issues: %v", report.Issues)
+	}
+}
+
+func TestNewValidatorWithKeywords_AccentedCharacters(t *testing.T) {
+	v := NewValidatorWithKeywords(false, []string{"DEBERÁ", "DEBE"})
+	report := v.ValidateSpecContent("test", `## Purpose
+A comprehensive authentication and authorization system that manages user access.
+
+## Requirements
+
+### Requirement: Login
+El sistema DEBERÁ permitir el acceso.
+
+#### Scenario: Successful login
+- **WHEN** user enters valid credentials
+- **THEN** system grants access
+`)
+
+	if !report.Valid {
+		t.Errorf("expected valid report with accented keyword DEBERÁ, got issues: %v", report.Issues)
+	}
+}
+
+func TestNewValidatorWithKeywords_DeltaSpecValidation(t *testing.T) {
+	dir := t.TempDir()
+	changeDir := filepath.Join(dir, "changes", "test")
+	specsDir := filepath.Join(changeDir, "specs", "auth")
+	if err := os.MkdirAll(specsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	content := `## ADDED Requirements
+
+### Requirement: Login
+El sistema DEBE permitir login.
+
+#### Scenario: T
+- **WHEN** test
+`
+	if err := os.WriteFile(filepath.Join(specsDir, "spec.md"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	v := NewValidatorWithKeywords(false, []string{"DEBE", "DEBERA"})
+	report := v.ValidateChangeDeltaSpecs(changeDir)
+
+	if !report.Valid {
+		t.Errorf("expected valid report with custom keywords in delta spec, got issues: %v", report.Issues)
+	}
+}
+
+func TestNewValidatorWithKeywords_DeltaSpecFails(t *testing.T) {
+	dir := t.TempDir()
+	changeDir := filepath.Join(dir, "changes", "test")
+	specsDir := filepath.Join(changeDir, "specs", "auth")
+	if err := os.MkdirAll(specsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	content := `## ADDED Requirements
+
+### Requirement: Login
+The system allows login.
+
+#### Scenario: T
+- **WHEN** test
+`
+	if err := os.WriteFile(filepath.Join(specsDir, "spec.md"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	v := NewValidatorWithKeywords(false, []string{"DEBE", "DEBERA"})
+	report := v.ValidateChangeDeltaSpecs(changeDir)
+
+	if report.Valid {
+		t.Error("expected invalid report when custom keywords missing from delta spec")
+	}
+	found := false
+	for _, issue := range report.Issues {
+		if strings.Contains(issue.Message, "DEBE") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected error message to mention custom keywords")
+	}
+}
+
+func TestNewValidatorWithKeywords_ErrorMessageDefaultKeywords(t *testing.T) {
+	v := NewValidator(false)
+	report := v.ValidateSpecContent("test", `## Purpose
+A comprehensive authentication and authorization system that manages user access.
+
+## Requirements
+
+### Requirement: Feature
+The system does something without required keywords.
+
+#### Scenario: T
+- **WHEN** test
+- **THEN** result
+`)
+
+	if report.Valid {
+		t.Error("expected invalid report")
+	}
+	found := false
+	for _, issue := range report.Issues {
+		if issue.Message == "Requirement must contain SHALL or MUST keyword" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected default keyword error message, got issues: %v", report.Issues)
+	}
+}
+
+func TestNewValidatorWithKeywords_ErrorMessageCustomKeywords(t *testing.T) {
+	v := NewValidatorWithKeywords(false, []string{"DEBE", "DEBERA"})
+	report := v.ValidateSpecContent("test", `## Purpose
+A comprehensive authentication and authorization system that manages user access.
+
+## Requirements
+
+### Requirement: Feature
+The system does something without required keywords.
+
+#### Scenario: T
+- **WHEN** test
+- **THEN** result
+`)
+
+	if report.Valid {
+		t.Error("expected invalid report")
+	}
+	found := false
+	for _, issue := range report.Issues {
+		if issue.Message == "Requirement must contain DEBE or DEBERA keyword" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected custom keyword error message, got issues: %v", report.Issues)
+	}
+}
+
 func TestStrictMode_WarningsAsErrors(t *testing.T) {
 	v := NewValidator(true)
 	// This spec has a short purpose which triggers a warning

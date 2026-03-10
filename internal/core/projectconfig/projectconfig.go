@@ -4,13 +4,21 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 
 	"gopkg.in/yaml.v3"
 )
 
+var regexMetaChars = regexp.MustCompile(`[.*+?^${}()|[\]\\]`)
+
 // MaxContextSize is the maximum allowed size for the context field (50KB).
 const MaxContextSize = 50 * 1024
+
+// KeywordsConfig holds configurable keyword settings.
+type KeywordsConfig struct {
+	Normative []string `yaml:"normative" json:"normative"`
+}
 
 // ProjectConfig represents the openspec/config.yaml file.
 type ProjectConfig struct {
@@ -19,6 +27,7 @@ type ProjectConfig struct {
 	Workflows []string            `yaml:"workflows,omitempty" json:"workflows,omitempty"`
 	Context   string              `yaml:"context,omitempty" json:"context,omitempty"`
 	Rules     map[string][]string `yaml:"rules,omitempty" json:"rules,omitempty"`
+	Keywords  *KeywordsConfig     `yaml:"keywords,omitempty" json:"keywords,omitempty"`
 }
 
 // ReadProjectConfig reads and parses openspec/config.yaml from the project root.
@@ -92,12 +101,47 @@ func ReadProjectConfig(projectRoot string) *ProjectConfig {
 		}
 	}
 
+	// Parse keywords
+	if kw, ok := raw["keywords"].(map[string]interface{}); ok {
+		kwConfig := &KeywordsConfig{}
+		if normative, ok := kw["normative"].([]interface{}); ok {
+			for _, item := range normative {
+				if s, ok := item.(string); ok {
+					kwConfig.Normative = append(kwConfig.Normative, s)
+				}
+			}
+		}
+		config.Keywords = kwConfig
+	}
+
 	if config.Schema == "" && config.Context == "" && config.Profile == "" &&
-		len(config.Rules) == 0 && len(config.Workflows) == 0 {
+		len(config.Rules) == 0 && len(config.Workflows) == 0 && config.Keywords == nil {
 		return nil
 	}
 
 	return config
+}
+
+// ValidateKeywords checks the keywords configuration for issues.
+// Returns warnings (not errors) so projects can still function.
+func ValidateKeywords(kw *KeywordsConfig) []string {
+	if kw == nil {
+		return nil
+	}
+	var warnings []string
+	if len(kw.Normative) == 0 {
+		warnings = append(warnings, "keywords.normative is empty; validator will fall back to default keywords (SHALL, MUST)")
+	}
+	for _, keyword := range kw.Normative {
+		if keyword == "" {
+			warnings = append(warnings, "keywords.normative contains an empty string")
+			continue
+		}
+		if regexMetaChars.MatchString(keyword) {
+			warnings = append(warnings, fmt.Sprintf("keyword %q contains regex metacharacters; this may cause unexpected behavior", keyword))
+		}
+	}
+	return warnings
 }
 
 // ValidateConfigRules checks that rule keys reference valid artifact IDs.

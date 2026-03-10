@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/santif/openspec-go/internal/core/parsers"
+	"github.com/santif/openspec-go/internal/core/projectconfig"
 	"github.com/santif/openspec-go/internal/core/validation"
 	"github.com/santif/openspec-go/internal/utils"
 )
@@ -433,7 +434,12 @@ func ApplySpecs(projectRoot, changeName string, opts ApplyOptions) (ApplyOutput,
 
 	// Validate rebuilt specs unless skipped
 	if !opts.SkipValidation {
-		v := validation.NewValidator(false)
+		// Read project config for custom keywords
+		var keywords []string
+		if cfg := projectconfig.ReadProjectConfig(projectRoot); cfg != nil && cfg.Keywords != nil {
+			keywords = cfg.Keywords.Normative
+		}
+		v := validation.NewValidatorWithKeywords(false, keywords)
 		for _, p := range preparedUpdates {
 			specName := filepath.Base(filepath.Dir(p.update.Target))
 			report := v.ValidateSpecContent(specName, p.rebuilt)
