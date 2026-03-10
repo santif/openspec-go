@@ -45,7 +45,7 @@ main() {
         say "Fetching latest release..."
         TAG=$(curl -fsSL "${GITHUB_API}/repos/${REPO}/releases/latest" \
             | grep '"tag_name"' \
-            | sed -E 's/.*"tag_name":[[:space:]]*"([^"]+)".*/\1/')
+            | sed 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/')
 
         if [ -z "$TAG" ]; then
             err "Failed to determine latest release version"
@@ -109,9 +109,8 @@ main() {
 
     if [ -d "$INSTALL_DIR" ] && [ -w "$INSTALL_DIR" ]; then
         USE_SUDO=""
-    elif command -v sudo >/dev/null 2>&1; then
+    elif command -v sudo >/dev/null 2>&1 && sudo mkdir -p "$INSTALL_DIR" 2>/dev/null; then
         USE_SUDO="sudo"
-        sudo mkdir -p "$INSTALL_DIR"
         say "Installing to ${INSTALL_DIR} (requires sudo)..."
     else
         INSTALL_DIR="${HOME}/.local/bin"
