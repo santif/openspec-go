@@ -51,7 +51,7 @@ curl -sSL https://raw.githubusercontent.com/santif/openspec-go/main/install.sh |
 Or pin a specific version:
 
 ```bash
-VERSION=0.1.0 curl -sSL https://raw.githubusercontent.com/santif/openspec-go/main/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/santif/openspec-go/main/install.sh | VERSION=0.1.0 sh
 ```
 
 ### From source

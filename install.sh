@@ -61,17 +61,17 @@ main() {
     CHECKSUMS_URL="${GITHUB_RELEASES}/download/${TAG}/checksums.txt"
 
     # Create temp directory with cleanup trap
-    TMPDIR=$(mktemp -d)
-    trap 'rm -rf "$TMPDIR"' EXIT INT TERM
+    WORK_DIR=$(mktemp -d)
+    trap 'rm -rf "$WORK_DIR"' EXIT INT TERM
 
     # Download archive and checksums
     say "Downloading ${ARCHIVE}..."
-    if ! curl -fsSL -o "${TMPDIR}/${ARCHIVE}" "$DOWNLOAD_URL"; then
+    if ! curl -fsSL -o "${WORK_DIR}/${ARCHIVE}" "$DOWNLOAD_URL"; then
         err "Failed to download ${ARCHIVE}. Check that version ${VERSION} exists for ${OS}/${ARCH}."
     fi
 
     say "Verifying checksum..."
-    if ! curl -fsSL -o "${TMPDIR}/checksums.txt" "$CHECKSUMS_URL"; then
+    if ! curl -fsSL -o "${WORK_DIR}/checksums.txt" "$CHECKSUMS_URL"; then
         err "Failed to download checksums.txt"
     fi
 
@@ -85,12 +85,12 @@ main() {
     fi
 
     # Verify checksum
-    EXPECTED=$(grep "${ARCHIVE}" "${TMPDIR}/checksums.txt" | awk '{print $1}')
+    EXPECTED=$(grep -F "${ARCHIVE}" "${WORK_DIR}/checksums.txt" | awk '{print $1}')
     if [ -z "$EXPECTED" ]; then
         err "Archive ${ARCHIVE} not found in checksums.txt"
     fi
 
-    ACTUAL=$(cd "$TMPDIR" && $SHASUM_CMD "${ARCHIVE}" | awk '{print $1}')
+    ACTUAL=$(cd "$WORK_DIR" && $SHASUM_CMD "${ARCHIVE}" | awk '{print $1}')
     if [ "$EXPECTED" != "$ACTUAL" ]; then
         err "Checksum verification failed (expected: ${EXPECTED}, got: ${ACTUAL})"
     fi
@@ -98,7 +98,7 @@ main() {
     say "Checksum verified."
 
     # Extract binary
-    tar -xzf "${TMPDIR}/${ARCHIVE}" -C "${TMPDIR}" "${BINARY}"
+    tar -xzf "${WORK_DIR}/${ARCHIVE}" -C "${WORK_DIR}" "${BINARY}"
 
     # Determine install directory
     INSTALL_DIR="/usr/local/bin"
@@ -116,9 +116,9 @@ main() {
 
     # Install binary
     if [ -n "$USE_SUDO" ]; then
-        sudo install -m 755 "${TMPDIR}/${BINARY}" "${INSTALL_DIR}/${BINARY}"
+        sudo install -m 755 "${WORK_DIR}/${BINARY}" "${INSTALL_DIR}/${BINARY}"
     else
-        install -m 755 "${TMPDIR}/${BINARY}" "${INSTALL_DIR}/${BINARY}"
+        install -m 755 "${WORK_DIR}/${BINARY}" "${INSTALL_DIR}/${BINARY}"
     fi
 
     # Warn if install dir is not on PATH
