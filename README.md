@@ -48,12 +48,6 @@ openspec archive add-user-auth
 curl -sSL https://raw.githubusercontent.com/santif/openspec-go/main/install.sh | sh
 ```
 
-Or pin a specific version:
-
-```bash
-curl -sSL https://raw.githubusercontent.com/santif/openspec-go/main/install.sh | VERSION=0.1.0 sh
-```
-
 ### From source
 
 ```bash
