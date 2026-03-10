@@ -1,5 +1,11 @@
 # OpenSpec
 
+[![CI](https://github.com/santif/openspec-go/actions/workflows/ci.yml/badge.svg)](https://github.com/santif/openspec-go/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/santif/openspec-go/graph/badge.svg)](https://codecov.io/gh/santif/openspec-go)
+[![Go Report Card](https://goreportcard.com/badge/github.com/santif/openspec-go)](https://goreportcard.com/report/github.com/santif/openspec-go)
+[![Go Reference](https://pkg.go.dev/badge/github.com/santif/openspec-go.svg)](https://pkg.go.dev/github.com/santif/openspec-go)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 AI-native system for spec-driven development. OpenSpec manages **specs** (requirements documents with scenarios) and **changes** (proposals that modify specs through deltas). The CLI validates markdown-based specs and changes, tracks artifact completion via a dependency graph, and generates workflow instructions for 24+ AI coding tools.
 
 ## Features
