@@ -21,7 +21,7 @@ AI-native system for spec-driven development. OpenSpec manages **specs** (requir
 ## Quick Start
 
 ```bash
-# Initialize OpenSpec in your project
+# Initialize openspec-go in your project
 openspec init --tools claude
 
 # Create a new change
@@ -73,7 +73,7 @@ Download from [Releases](https://github.com/santif/openspec-go/releases) for Lin
 
 | Command | Description |
 |---------|-------------|
-| `openspec init [path]` | Initialize OpenSpec in a project |
+| `openspec init [path]` | Initialize OpenSpec-Go in a project |
 | `openspec new change <name>` | Create a new change directory with template |
 | `openspec validate [name]` | Validate a change or spec |
 | `openspec status` | Show artifact completion for a change |
@@ -149,14 +149,27 @@ rules:
     - Keep proposals under 2 pages
   specs:
     - Use RFC 2119 keywords (SHALL, MUST)
-keywords:
-  normative: ["SHALL", "MUST"]   # o en español ["DEBE", "DEBERÁ", "DEBERA"]
 ```
 
 - **schema** — which artifact workflow to use
 - **context** — project context injected into instructions (max 50KB)
 - **rules** — per-artifact rules mapped to artifact IDs
-- **keywords.normative** — normative keywords validated in spec requirements (default: `SHALL`, `MUST`)
+
+### Keyword Localization
+
+OpenSpec-Go validates normative keywords (`SHALL`, `MUST`) in requirements and conditional keywords (`WHEN`, `THEN`, `AND`) in scenarios. Both can be customized in `openspec/config.yaml` to match your team's language:
+
+```yaml
+keywords:
+  normative: ["DEBE", "DEBERÁ", "DEBERA"]
+  conditionals:
+    when: "CUANDO"
+    then: "ENTONCES"
+    and: "Y"
+```
+
+- **keywords.normative** — keywords required in spec requirements (default: `SHALL`, `MUST`)
+- **keywords.conditionals** — keywords used in scenario steps (default: `WHEN`, `THEN`, `AND`)
 
 ## Project Data Layout
 
@@ -209,7 +222,7 @@ Fork a schema to customize: `openspec schema fork spec-driven`
 
 ## AI Tool Integrations
 
-OpenSpec generates workflow skill/command files for these AI coding tools:
+OpenSpec-Go generates workflow skill/command files for these AI coding tools:
 
 Amazon Q Developer, Antigravity, Auggie (Augment CLI), Claude Code, Cline, CodeBuddy Code, Codex, Continue, CoStrict, Crush, Cursor, Factory Droid, Gemini CLI, GitHub Copilot, iFlow, Kilo Code, Kiro, OpenCode, Pi, Qoder, Qwen Code, RooCode, Trae, Windsurf
 
