@@ -571,6 +571,22 @@ func TestResolveConditionals_Configured(t *testing.T) {
 	}
 }
 
+func TestResolveConditionals_PartialMerge(t *testing.T) {
+	kw := &KeywordsConfig{
+		Conditionals: &ConditionalsConfig{When: "CUANDO"},
+	}
+	c := ResolveConditionals(kw)
+	if c.When != "CUANDO" {
+		t.Errorf("expected When='CUANDO', got %q", c.When)
+	}
+	if c.Then != "THEN" {
+		t.Errorf("expected Then default 'THEN', got %q", c.Then)
+	}
+	if c.And != "AND" {
+		t.Errorf("expected And default 'AND', got %q", c.And)
+	}
+}
+
 func TestValidateKeywords_ValidConditionals(t *testing.T) {
 	kw := &KeywordsConfig{
 		Normative:    []string{"SHALL"},

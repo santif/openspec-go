@@ -70,8 +70,9 @@ func runInstructions(cmd *cobra.Command, args []string) error {
 	if cfg != nil {
 		context = cfg.Context
 		rules = cfg.Rules
-		if cfg.Keywords != nil {
-			conditionals = cfg.Keywords.Conditionals
+		if cfg.Keywords != nil && cfg.Keywords.Conditionals != nil {
+			resolved := projectconfig.ResolveConditionals(cfg.Keywords)
+			conditionals = &resolved
 		}
 	}
 

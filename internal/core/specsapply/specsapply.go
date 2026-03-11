@@ -438,7 +438,10 @@ func ApplySpecs(projectRoot, changeName string, opts ApplyOptions) (ApplyOutput,
 		var conditionals *projectconfig.ConditionalsConfig
 		if cfg := projectconfig.ReadProjectConfig(projectRoot); cfg != nil && cfg.Keywords != nil {
 			keywords = cfg.Keywords.Normative
-			conditionals = cfg.Keywords.Conditionals
+			if cfg.Keywords.Conditionals != nil {
+				resolved := projectconfig.ResolveConditionals(cfg.Keywords)
+				conditionals = &resolved
+			}
 		}
 		v := validation.NewValidatorWithKeywords(false, keywords, conditionals)
 		for _, p := range preparedUpdates {

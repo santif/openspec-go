@@ -29,11 +29,22 @@ func DefaultConditionals() ConditionalsConfig {
 
 // ResolveConditionals returns the effective conditional keywords.
 // If Keywords or Conditionals is nil, returns defaults.
+// Partially configured fields are merged with defaults.
 func ResolveConditionals(kw *KeywordsConfig) ConditionalsConfig {
+	defaults := DefaultConditionals()
 	if kw == nil || kw.Conditionals == nil {
-		return DefaultConditionals()
+		return defaults
 	}
-	return *kw.Conditionals
+	if kw.Conditionals.When != "" {
+		defaults.When = kw.Conditionals.When
+	}
+	if kw.Conditionals.Then != "" {
+		defaults.Then = kw.Conditionals.Then
+	}
+	if kw.Conditionals.And != "" {
+		defaults.And = kw.Conditionals.And
+	}
+	return defaults
 }
 
 // KeywordsConfig holds configurable keyword settings.

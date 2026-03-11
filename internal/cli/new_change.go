@@ -57,10 +57,12 @@ func runNewChange(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("change %q already exists", name)
 	}
 
+	// Read project config once for schema resolution and keyword substitution
+	cfg := projectconfig.ReadProjectConfig(projectRoot)
+
 	// Resolve schema
 	schemaName := schemaFlag
 	if schemaName == "" {
-		cfg := projectconfig.ReadProjectConfig(projectRoot)
 		if cfg != nil && cfg.Schema != "" {
 			schemaName = cfg.Schema
 		}
@@ -93,20 +95,19 @@ func runNewChange(cmd *cobra.Command, args []string) error {
 	graph := artifactgraph.NewGraphFromSchema(schema)
 	buildOrder := graph.GetBuildOrder()
 
-	// Read project config for conditional keywords
-	cfg := projectconfig.ReadProjectConfig(projectRoot)
-
 	// Write first artifact template (usually proposal.md)
 	if len(buildOrder) > 0 {
 		firstArtifact := graph.GetArtifact(buildOrder[0])
 		if firstArtifact != nil {
 			templateContent, err := artifactgraph.ReadTemplate(schemaName, firstArtifact.Template)
 			if err == nil {
-				// Apply conditional keyword substitution if configured
-				if cfg != nil && cfg.Keywords != nil && cfg.Keywords.Conditionals != nil {
-					cond := cfg.Keywords.Conditionals
-					templateContent = replaceConditionalKeywords(templateContent, cond)
+				// Apply conditional keyword substitution using resolved config
+				var kw *projectconfig.KeywordsConfig
+				if cfg != nil {
+					kw = cfg.Keywords
 				}
+				cond := projectconfig.ResolveConditionals(kw)
+				templateContent = replaceConditionalKeywords(templateContent, &cond)
 				templatePath := filepath.Join(changeDir, firstArtifact.Generates)
 				if writeErr := utils.WriteFile(templatePath, templateContent); writeErr != nil {
 					fmt.Fprintf(os.Stderr, "Warning: failed to write template %s: %v\n", firstArtifact.Generates, writeErr)
@@ -148,5 +149,4 @@ func replaceConditionalKeywords(content string, cond *projectconfig.Conditionals
 		content = strings.ReplaceAll(content, "**AND**", "**"+cond.And+"**")
 	}
 	return content
-}
 }

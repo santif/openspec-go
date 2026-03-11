@@ -33,7 +33,15 @@ func NewValidatorWithKeywords(strict bool, keywords []string, conditionals *proj
 	}
 	cond := projectconfig.DefaultConditionals()
 	if conditionals != nil {
-		cond = *conditionals
+		if conditionals.When != "" {
+			cond.When = conditionals.When
+		}
+		if conditionals.Then != "" {
+			cond.Then = conditionals.Then
+		}
+		if conditionals.And != "" {
+			cond.And = conditionals.And
+		}
 	}
 	v := &Validator{
 		StrictMode:          strict,
@@ -71,12 +79,12 @@ func (v *Validator) requirementNoKeywordMessage() string {
 }
 
 func (v *Validator) guideScenarioFormat() string {
-	return fmt.Sprintf("Scenarios must use level-4 headers. Convert bullet lists into:\n#### Scenario: Short name\n- **%s** ...\n- **%s** ...\n- **%s** ...",
+	return fmt.Sprintf(GuideScenarioFormatTemplate,
 		v.conditionalKeywords.When, v.conditionalKeywords.Then, v.conditionalKeywords.And)
 }
 
 func (v *Validator) guideMissingSpecSections() string {
-	return fmt.Sprintf("Missing required sections. Expected headers: \"## Purpose\" and \"## Requirements\". Example:\n## Purpose\n[brief purpose]\n\n## Requirements\n### Requirement: Clear requirement statement\nUsers SHALL ...\n\n#### Scenario: Descriptive name\n- **%s** ...\n- **%s** ...",
+	return fmt.Sprintf(GuideMissingSpecSectionsTemplate,
 		v.conditionalKeywords.When, v.conditionalKeywords.Then)
 }
 

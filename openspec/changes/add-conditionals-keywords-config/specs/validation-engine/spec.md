@@ -39,7 +39,7 @@ The system SHALL support creating a validator with custom normative keywords and
 - **THEN** the validator checks for SHALL or MUST in requirement text and uses WHEN/THEN/AND in guide messages
 
 #### Scenario: Validator with custom keywords
-- **WHEN** `NewValidatorWithKeywords(false, []string{"DEBE", "DEBERA"})` is called with conditionals {when: "CUANDO", then: "ENTONCES", and: "Y"}
+- **WHEN** `NewValidatorWithKeywords(false, []string{"DEBE", "DEBERA"}, &ConditionalsConfig{When: "CUANDO", Then: "ENTONCES", And: "Y"})` is called
 - **THEN** the validator checks for DEBE or DEBERA in requirement text and uses CUANDO/ENTONCES/Y in guide messages
 
 #### Scenario: Validator with nil keywords falls back to defaults

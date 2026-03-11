@@ -49,8 +49,9 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 
 	// Read project config for conditional keywords
 	var conditionals *projectconfig.ConditionalsConfig
-	if cfg := projectconfig.ReadProjectConfig(resolvedPath); cfg != nil && cfg.Keywords != nil {
-		conditionals = cfg.Keywords.Conditionals
+	if cfg := projectconfig.ReadProjectConfig(resolvedPath); cfg != nil && cfg.Keywords != nil && cfg.Keywords.Conditionals != nil {
+		resolved := projectconfig.ResolveConditionals(cfg.Keywords)
+		conditionals = &resolved
 	}
 
 	// Detect which tools have skill directories present
