@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -56,10 +57,12 @@ func runNewChange(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("change %q already exists", name)
 	}
 
+	// Read project config once for schema resolution and keyword substitution
+	cfg := projectconfig.ReadProjectConfig(projectRoot)
+
 	// Resolve schema
 	schemaName := schemaFlag
 	if schemaName == "" {
-		cfg := projectconfig.ReadProjectConfig(projectRoot)
 		if cfg != nil && cfg.Schema != "" {
 			schemaName = cfg.Schema
 		}
@@ -98,6 +101,13 @@ func runNewChange(cmd *cobra.Command, args []string) error {
 		if firstArtifact != nil {
 			templateContent, err := artifactgraph.ReadTemplate(schemaName, firstArtifact.Template)
 			if err == nil {
+				// Apply conditional keyword substitution using resolved config
+				var kw *projectconfig.KeywordsConfig
+				if cfg != nil {
+					kw = cfg.Keywords
+				}
+				cond := projectconfig.ResolveConditionals(kw)
+				templateContent = replaceConditionalKeywords(templateContent, &cond)
 				templatePath := filepath.Join(changeDir, firstArtifact.Generates)
 				if writeErr := utils.WriteFile(templatePath, templateContent); writeErr != nil {
 					fmt.Fprintf(os.Stderr, "Warning: failed to write template %s: %v\n", firstArtifact.Generates, writeErr)
@@ -124,4 +134,19 @@ func runNewChange(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  Next: Edit %s/proposal.md to describe your change\n\n", changeDir)
 
 	return nil
+}
+
+// replaceConditionalKeywords replaces bold-formatted default keywords in template content
+// with the configured conditional keywords.
+func replaceConditionalKeywords(content string, cond *projectconfig.ConditionalsConfig) string {
+	if cond.When != "" {
+		content = strings.ReplaceAll(content, "**WHEN**", "**"+cond.When+"**")
+	}
+	if cond.Then != "" {
+		content = strings.ReplaceAll(content, "**THEN**", "**"+cond.Then+"**")
+	}
+	if cond.And != "" {
+		content = strings.ReplaceAll(content, "**AND**", "**"+cond.And+"**")
+	}
+	return content
 }

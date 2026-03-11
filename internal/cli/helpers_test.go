@@ -7,6 +7,7 @@ import (
 	"github.com/fatih/color"
 
 	"github.com/santif/openspec-go/internal/core/config"
+	"github.com/santif/openspec-go/internal/core/projectconfig"
 	"github.com/santif/openspec-go/internal/core/validation"
 )
 
@@ -246,6 +247,27 @@ func TestResolveTools_AllContainsKnownTools(t *testing.T) {
 		if !tool.Available && values[tool.Value] {
 			t.Errorf("tool %q has Available=false but was included in 'all'", tool.Value)
 		}
+	}
+}
+
+// --- replaceConditionalKeywords ---
+
+func TestReplaceConditionalKeywords(t *testing.T) {
+	content := "- **WHEN** condition\n- **THEN** outcome\n- **AND** extra"
+	cond := &projectconfig.ConditionalsConfig{When: "CUANDO", Then: "ENTONCES", And: "Y"}
+	result := replaceConditionalKeywords(content, cond)
+	expected := "- **CUANDO** condition\n- **ENTONCES** outcome\n- **Y** extra"
+	if result != expected {
+		t.Errorf("expected %q, got %q", expected, result)
+	}
+}
+
+func TestReplaceConditionalKeywords_NoMatch(t *testing.T) {
+	content := "No bold keywords here, just WHEN and THEN"
+	cond := &projectconfig.ConditionalsConfig{When: "CUANDO", Then: "ENTONCES", And: "Y"}
+	result := replaceConditionalKeywords(content, cond)
+	if result != content {
+		t.Errorf("expected no changes for non-bold keywords, got %q", result)
 	}
 }
 

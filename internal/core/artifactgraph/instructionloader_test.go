@@ -3,6 +3,8 @@ package artifactgraph
 import (
 	"strings"
 	"testing"
+
+	"github.com/santif/openspec-go/internal/core/projectconfig"
 )
 
 func TestLoadEnrichedInstruction_Basic(t *testing.T) {
@@ -15,7 +17,7 @@ func TestLoadEnrichedInstruction_Basic(t *testing.T) {
 	}
 	graph := NewGraphFromSchema(schema)
 
-	result, err := LoadEnrichedInstruction(graph, "proposal", "", nil)
+	result, err := LoadEnrichedInstruction(graph, "proposal", "", nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -38,7 +40,7 @@ func TestLoadEnrichedInstruction_WithContext(t *testing.T) {
 	}
 	graph := NewGraphFromSchema(schema)
 
-	result, err := LoadEnrichedInstruction(graph, "proposal", "This is a Go project", nil)
+	result, err := LoadEnrichedInstruction(graph, "proposal", "This is a Go project", nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -67,7 +69,7 @@ func TestLoadEnrichedInstruction_WithRules(t *testing.T) {
 	rules := map[string][]string{
 		"proposal": {"Rule 1", "Rule 2"},
 	}
-	result, err := LoadEnrichedInstruction(graph, "proposal", "", rules)
+	result, err := LoadEnrichedInstruction(graph, "proposal", "", rules, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -96,7 +98,7 @@ func TestLoadEnrichedInstruction_NotFound(t *testing.T) {
 	}
 	graph := NewGraphFromSchema(schema)
 
-	_, err := LoadEnrichedInstruction(graph, "nonexistent", "", nil)
+	_, err := LoadEnrichedInstruction(graph, "nonexistent", "", nil, nil)
 	if err == nil {
 		t.Fatal("expected error for non-existent artifact, got nil")
 	}
@@ -118,7 +120,7 @@ func TestLoadEnrichedInstruction_AllParts(t *testing.T) {
 	rules := map[string][]string{
 		"proposal": {"Follow coding standards", "Include tests"},
 	}
-	result, err := LoadEnrichedInstruction(graph, "proposal", "A microservices project", rules)
+	result, err := LoadEnrichedInstruction(graph, "proposal", "A microservices project", rules, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -154,7 +156,7 @@ func TestLoadApplyInstruction_Basic(t *testing.T) {
 	}
 	graph := NewGraphFromSchema(schema)
 
-	result, err := LoadApplyInstruction(graph, "", nil)
+	result, err := LoadApplyInstruction(graph, "", nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -177,7 +179,7 @@ func TestLoadApplyInstruction_NoApplyPhase(t *testing.T) {
 	}
 	graph := NewGraphFromSchema(schema)
 
-	_, err := LoadApplyInstruction(graph, "", nil)
+	_, err := LoadApplyInstruction(graph, "", nil, nil)
 	if err == nil {
 		t.Fatal("expected error when schema has no apply phase, got nil")
 	}
@@ -200,7 +202,7 @@ func TestLoadApplyInstruction_WithContextAndRules(t *testing.T) {
 	rules := map[string][]string{
 		"apply": {"Run tests after applying", "Update documentation"},
 	}
-	result, err := LoadApplyInstruction(graph, "Enterprise application context", rules)
+	result, err := LoadApplyInstruction(graph, "Enterprise application context", rules, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -219,5 +221,65 @@ func TestLoadApplyInstruction_WithContextAndRules(t *testing.T) {
 	}
 	if !strings.Contains(result.Instruction, "- Update documentation") {
 		t.Error("expected instruction to contain second rule")
+	}
+}
+
+func TestLoadEnrichedInstruction_WithConditionals(t *testing.T) {
+	schema := &SchemaYaml{
+		Name:    "test",
+		Version: 1,
+		Artifacts: []Artifact{
+			{ID: "proposal", Generates: "proposal.md", Template: "t.md", Requires: []string{}, Instruction: "Write a proposal"},
+		},
+	}
+	graph := NewGraphFromSchema(schema)
+
+	cond := &projectconfig.ConditionalsConfig{When: "CUANDO", Then: "ENTONCES", And: "Y"}
+	result, err := LoadEnrichedInstruction(graph, "proposal", "", nil, cond)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(result.Instruction, "**CUANDO**") || !strings.Contains(result.Instruction, "**ENTONCES**") {
+		t.Errorf("expected Project Keywords block with CUANDO/ENTONCES, got: %s", result.Instruction)
+	}
+}
+
+func TestLoadEnrichedInstruction_NilConditionalsNoBlock(t *testing.T) {
+	schema := &SchemaYaml{
+		Name:    "test",
+		Version: 1,
+		Artifacts: []Artifact{
+			{ID: "proposal", Generates: "proposal.md", Template: "t.md", Requires: []string{}, Instruction: "Write a proposal"},
+		},
+	}
+	graph := NewGraphFromSchema(schema)
+
+	result, err := LoadEnrichedInstruction(graph, "proposal", "", nil, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(result.Instruction, "Project Keywords") {
+		t.Error("should not contain Project Keywords block when conditionals is nil")
+	}
+}
+
+func TestLoadApplyInstruction_WithConditionals(t *testing.T) {
+	schema := &SchemaYaml{
+		Name:    "test",
+		Version: 1,
+		Artifacts: []Artifact{
+			{ID: "proposal", Generates: "proposal.md", Template: "t.md", Requires: []string{}},
+		},
+		Apply: &ApplyPhase{Instruction: "Apply the changes"},
+	}
+	graph := NewGraphFromSchema(schema)
+
+	cond := &projectconfig.ConditionalsConfig{When: "CUANDO", Then: "ENTONCES", And: "Y"}
+	result, err := LoadApplyInstruction(graph, "", nil, cond)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(result.Instruction, "**CUANDO**") {
+		t.Errorf("expected Project Keywords block with CUANDO, got: %s", result.Instruction)
 	}
 }

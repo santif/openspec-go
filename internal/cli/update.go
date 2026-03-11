@@ -12,6 +12,7 @@ import (
 	"github.com/santif/openspec-go/internal/core/config"
 	"github.com/santif/openspec-go/internal/core/globalconfig"
 	"github.com/santif/openspec-go/internal/core/profiles"
+	"github.com/santif/openspec-go/internal/core/projectconfig"
 	"github.com/santif/openspec-go/internal/utils"
 )
 
@@ -46,6 +47,13 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 	gcfg := globalconfig.GetGlobalConfig()
 	workflows := profiles.GetProfileWorkflows(gcfg.Profile, gcfg.Workflows)
 
+	// Read project config for conditional keywords
+	var conditionals *projectconfig.ConditionalsConfig
+	if cfg := projectconfig.ReadProjectConfig(resolvedPath); cfg != nil && cfg.Keywords != nil && cfg.Keywords.Conditionals != nil {
+		resolved := projectconfig.ResolveConditionals(cfg.Keywords)
+		conditionals = &resolved
+	}
+
 	// Detect which tools have skill directories present
 	var updated int
 	for _, tool := range config.AITools {
@@ -61,7 +69,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		files, err := commandgen.GenerateForTool(tool.Value, workflows, gcfg.Delivery, version)
+		files, err := commandgen.GenerateForTool(tool.Value, workflows, gcfg.Delivery, version, conditionals)
 		if err != nil {
 			continue
 		}

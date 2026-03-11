@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/santif/openspec-go/internal/core/projectconfig"
 	"github.com/santif/openspec-go/internal/core/schemas"
 )
 
@@ -419,7 +420,7 @@ The system SHALL allow login.
 }
 
 func TestNewValidatorWithKeywords_CustomKeywords(t *testing.T) {
-	v := NewValidatorWithKeywords(false, []string{"DEBE", "DEBERA"})
+	v := NewValidatorWithKeywords(false, []string{"DEBE", "DEBERA"}, nil)
 	report := v.ValidateSpecContent("test", `## Purpose
 A comprehensive authentication and authorization system that manages user access.
 
@@ -439,7 +440,7 @@ El sistema DEBE permitir el acceso con credenciales válidas.
 }
 
 func TestNewValidatorWithKeywords_CustomKeywordsFail(t *testing.T) {
-	v := NewValidatorWithKeywords(false, []string{"DEBE", "DEBERA"})
+	v := NewValidatorWithKeywords(false, []string{"DEBE", "DEBERA"}, nil)
 	report := v.ValidateSpecContent("test", `## Purpose
 A comprehensive authentication and authorization system that manages user access.
 
@@ -469,7 +470,7 @@ The system allows login with valid credentials.
 }
 
 func TestNewValidatorWithKeywords_NilFallsBackToDefaults(t *testing.T) {
-	v := NewValidatorWithKeywords(false, nil)
+	v := NewValidatorWithKeywords(false, nil, nil)
 	report := v.ValidateSpecContent("test", `## Purpose
 A comprehensive authentication and authorization system that manages user access.
 
@@ -489,7 +490,7 @@ The system SHALL authenticate users.
 }
 
 func TestNewValidatorWithKeywords_AccentedCharacters(t *testing.T) {
-	v := NewValidatorWithKeywords(false, []string{"DEBERÁ", "DEBE"})
+	v := NewValidatorWithKeywords(false, []string{"DEBERÁ", "DEBE"}, nil)
 	report := v.ValidateSpecContent("test", `## Purpose
 A comprehensive authentication and authorization system that manages user access.
 
@@ -527,7 +528,7 @@ El sistema DEBE permitir login.
 		t.Fatal(err)
 	}
 
-	v := NewValidatorWithKeywords(false, []string{"DEBE", "DEBERA"})
+	v := NewValidatorWithKeywords(false, []string{"DEBE", "DEBERA"}, nil)
 	report := v.ValidateChangeDeltaSpecs(changeDir)
 
 	if !report.Valid {
@@ -554,7 +555,7 @@ The system allows login.
 		t.Fatal(err)
 	}
 
-	v := NewValidatorWithKeywords(false, []string{"DEBE", "DEBERA"})
+	v := NewValidatorWithKeywords(false, []string{"DEBE", "DEBERA"}, nil)
 	report := v.ValidateChangeDeltaSpecs(changeDir)
 
 	if report.Valid {
@@ -603,7 +604,7 @@ The system does something without required keywords.
 }
 
 func TestNewValidatorWithKeywords_ErrorMessageCustomKeywords(t *testing.T) {
-	v := NewValidatorWithKeywords(false, []string{"DEBE", "DEBERA"})
+	v := NewValidatorWithKeywords(false, []string{"DEBE", "DEBERA"}, nil)
 	report := v.ValidateSpecContent("test", `## Purpose
 A comprehensive authentication and authorization system that manages user access.
 
@@ -1141,40 +1142,72 @@ func TestApplyChangeRules_MissingRequirements(t *testing.T) {
 }
 
 func TestEnrichTopLevelError_MissingSpecSections(t *testing.T) {
-	msg := enrichTopLevelError("spec must have a Purpose section")
-	if !strings.Contains(msg, Messages.GuideMissingSpecSections) {
-		t.Error("expected guide for missing spec sections")
+	v := NewValidator(false)
+	msg := v.enrichTopLevelError("spec must have a Purpose section")
+	if !strings.Contains(msg, "**WHEN**") {
+		t.Error("expected guide with WHEN keyword for missing spec sections")
 	}
 
-	msg = enrichTopLevelError("spec must have a Requirements section")
-	if !strings.Contains(msg, Messages.GuideMissingSpecSections) {
-		t.Error("expected guide for missing requirements section")
+	msg = v.enrichTopLevelError("spec must have a Requirements section")
+	if !strings.Contains(msg, "**WHEN**") {
+		t.Error("expected guide with WHEN keyword for missing requirements section")
 	}
 }
 
 func TestEnrichTopLevelError_MissingChangeSections(t *testing.T) {
-	msg := enrichTopLevelError("change must have a Why section")
+	v := NewValidator(false)
+	msg := v.enrichTopLevelError("change must have a Why section")
 	if !strings.Contains(msg, Messages.GuideMissingChangeSections) {
 		t.Error("expected guide for missing change sections")
 	}
 
-	msg = enrichTopLevelError("change must have a What Changes section")
+	msg = v.enrichTopLevelError("change must have a What Changes section")
 	if !strings.Contains(msg, Messages.GuideMissingChangeSections) {
 		t.Error("expected guide for missing change sections")
 	}
 }
 
 func TestEnrichTopLevelError_NoDeltas(t *testing.T) {
-	msg := enrichTopLevelError(Messages.ChangeNoDeltas)
+	v := NewValidator(false)
+	msg := v.enrichTopLevelError(Messages.ChangeNoDeltas)
 	if !strings.Contains(msg, Messages.GuideNoDeltas) {
 		t.Error("expected guide for no deltas")
 	}
 }
 
 func TestEnrichTopLevelError_UnknownMessage(t *testing.T) {
-	msg := enrichTopLevelError("some unknown error message")
+	v := NewValidator(false)
+	msg := v.enrichTopLevelError("some unknown error message")
 	if msg != "some unknown error message" {
 		t.Errorf("expected passthrough for unknown message, got: %q", msg)
+	}
+}
+
+func TestGuideMessages_DefaultConditionals(t *testing.T) {
+	v := NewValidator(false)
+	guide := v.guideScenarioFormat()
+	if !strings.Contains(guide, "**WHEN**") || !strings.Contains(guide, "**THEN**") || !strings.Contains(guide, "**AND**") {
+		t.Errorf("expected default WHEN/THEN/AND in guide, got: %s", guide)
+	}
+	missing := v.guideMissingSpecSections()
+	if !strings.Contains(missing, "**WHEN**") || !strings.Contains(missing, "**THEN**") {
+		t.Errorf("expected default WHEN/THEN in missing sections guide, got: %s", missing)
+	}
+}
+
+func TestGuideMessages_CustomConditionals(t *testing.T) {
+	cond := &projectconfig.ConditionalsConfig{When: "CUANDO", Then: "ENTONCES", And: "Y"}
+	v := NewValidatorWithKeywords(false, nil, cond)
+	guide := v.guideScenarioFormat()
+	if !strings.Contains(guide, "**CUANDO**") || !strings.Contains(guide, "**ENTONCES**") || !strings.Contains(guide, "**Y**") {
+		t.Errorf("expected CUANDO/ENTONCES/Y in guide, got: %s", guide)
+	}
+	if strings.Contains(guide, "**WHEN**") || strings.Contains(guide, "**THEN**") {
+		t.Errorf("should not contain default WHEN/THEN when custom conditionals set, got: %s", guide)
+	}
+	missing := v.guideMissingSpecSections()
+	if !strings.Contains(missing, "**CUANDO**") || !strings.Contains(missing, "**ENTONCES**") {
+		t.Errorf("expected CUANDO/ENTONCES in missing sections guide, got: %s", missing)
 	}
 }
 

@@ -54,10 +54,15 @@ func runValidate(cmd *cobra.Command, args []string) error {
 
 	// Read project config for custom keywords
 	var keywords []string
+	var conditionals *projectconfig.ConditionalsConfig
 	if cfg := projectconfig.ReadProjectConfig(projectRoot); cfg != nil && cfg.Keywords != nil {
 		keywords = cfg.Keywords.Normative
+		if cfg.Keywords.Conditionals != nil {
+			resolved := projectconfig.ResolveConditionals(cfg.Keywords)
+			conditionals = &resolved
+		}
 	}
-	v := validation.NewValidatorWithKeywords(strict, keywords)
+	v := validation.NewValidatorWithKeywords(strict, keywords, conditionals)
 	var results []validationResult
 
 	if len(args) > 0 {

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/santif/openspec-go/internal/core/parsers"
+	"github.com/santif/openspec-go/internal/core/projectconfig"
 	"github.com/santif/openspec-go/internal/core/schemas"
 	"github.com/santif/openspec-go/internal/utils"
 )
@@ -16,23 +17,37 @@ import (
 var defaultNormativeKeywords = []string{"SHALL", "MUST"}
 
 type Validator struct {
-	StrictMode        bool
-	normativeKeywords []string
-	normativeRegex    *regexp.Regexp
+	StrictMode          bool
+	normativeKeywords   []string
+	normativeRegex      *regexp.Regexp
+	conditionalKeywords projectconfig.ConditionalsConfig
 }
 
 func NewValidator(strict bool) *Validator {
-	return NewValidatorWithKeywords(strict, nil)
+	return NewValidatorWithKeywords(strict, nil, nil)
 }
 
-func NewValidatorWithKeywords(strict bool, keywords []string) *Validator {
+func NewValidatorWithKeywords(strict bool, keywords []string, conditionals *projectconfig.ConditionalsConfig) *Validator {
 	if len(keywords) == 0 {
 		keywords = defaultNormativeKeywords
 	}
+	cond := projectconfig.DefaultConditionals()
+	if conditionals != nil {
+		if conditionals.When != "" {
+			cond.When = conditionals.When
+		}
+		if conditionals.Then != "" {
+			cond.Then = conditionals.Then
+		}
+		if conditionals.And != "" {
+			cond.And = conditionals.And
+		}
+	}
 	v := &Validator{
-		StrictMode:        strict,
-		normativeKeywords: keywords,
-		normativeRegex:    buildNormativeRegex(keywords),
+		StrictMode:          strict,
+		normativeKeywords:   keywords,
+		normativeRegex:      buildNormativeRegex(keywords),
+		conditionalKeywords: cond,
 	}
 	return v
 }
@@ -63,6 +78,16 @@ func (v *Validator) requirementNoKeywordMessage() string {
 	return "Requirement must contain " + strings.Join(v.normativeKeywords, " or ") + " keyword"
 }
 
+func (v *Validator) guideScenarioFormat() string {
+	return fmt.Sprintf(GuideScenarioFormatTemplate,
+		v.conditionalKeywords.When, v.conditionalKeywords.Then, v.conditionalKeywords.And)
+}
+
+func (v *Validator) guideMissingSpecSections() string {
+	return fmt.Sprintf(GuideMissingSpecSectionsTemplate,
+		v.conditionalKeywords.When, v.conditionalKeywords.Then)
+}
+
 func (v *Validator) ValidateSpec(filePath string) Report {
 	var issues []Issue
 	specName := extractNameFromPath(filePath)
@@ -72,7 +97,7 @@ func (v *Validator) ValidateSpec(filePath string) Report {
 		issues = append(issues, Issue{
 			Level:   LevelError,
 			Path:    "file",
-			Message: enrichTopLevelError(err.Error()),
+			Message: v.enrichTopLevelError(err.Error()),
 		})
 		return v.createReport(issues)
 	}
@@ -82,13 +107,13 @@ func (v *Validator) ValidateSpec(filePath string) Report {
 		issues = append(issues, Issue{
 			Level:   LevelError,
 			Path:    "file",
-			Message: enrichTopLevelError(err.Error()),
+			Message: v.enrichTopLevelError(err.Error()),
 		})
 		return v.createReport(issues)
 	}
 
 	issues = append(issues, v.validateSpecSchema(spec)...)
-	issues = append(issues, applySpecRules(spec)...)
+	issues = append(issues, v.applySpecRulesWithConditionals(spec)...)
 
 	return v.createReport(issues)
 }
@@ -101,13 +126,13 @@ func (v *Validator) ValidateSpecContent(specName, content string) Report {
 		issues = append(issues, Issue{
 			Level:   LevelError,
 			Path:    "file",
-			Message: enrichTopLevelError(err.Error()),
+			Message: v.enrichTopLevelError(err.Error()),
 		})
 		return v.createReport(issues)
 	}
 
 	issues = append(issues, v.validateSpecSchema(spec)...)
-	issues = append(issues, applySpecRules(spec)...)
+	issues = append(issues, v.applySpecRulesWithConditionals(spec)...)
 
 	return v.createReport(issues)
 }
@@ -121,7 +146,7 @@ func (v *Validator) ValidateChange(filePath string) Report {
 		issues = append(issues, Issue{
 			Level:   LevelError,
 			Path:    "file",
-			Message: enrichTopLevelError(err.Error()),
+			Message: v.enrichTopLevelError(err.Error()),
 		})
 		return v.createReport(issues)
 	}
@@ -132,7 +157,7 @@ func (v *Validator) ValidateChange(filePath string) Report {
 		issues = append(issues, Issue{
 			Level:   LevelError,
 			Path:    "file",
-			Message: enrichTopLevelError(err.Error()),
+			Message: v.enrichTopLevelError(err.Error()),
 		})
 		return v.createReport(issues)
 	}
@@ -161,7 +186,7 @@ func (v *Validator) ValidateChangeDeltaSpecs(changeDir string) Report {
 		issues = append(issues, Issue{
 			Level:   LevelError,
 			Path:    "file",
-			Message: enrichTopLevelError(Messages.ChangeNoDeltas),
+			Message: v.enrichTopLevelError(Messages.ChangeNoDeltas),
 		})
 		return v.createReport(issues)
 	}
@@ -326,7 +351,7 @@ func (v *Validator) ValidateChangeDeltaSpecs(changeDir string) Report {
 		issues = append(issues, Issue{
 			Level:   LevelError,
 			Path:    "file",
-			Message: enrichTopLevelError(Messages.ChangeNoDeltas),
+			Message: v.enrichTopLevelError(Messages.ChangeNoDeltas),
 		})
 	}
 
@@ -363,6 +388,23 @@ func (v *Validator) validateSpecSchema(spec *schemas.Spec) []Issue {
 	return issues
 }
 
+// applySpecRules is now a method on Validator to access conditional keywords.
+func (v *Validator) applySpecRulesWithConditionals(spec *schemas.Spec) []Issue {
+	var issues []Issue
+	if len(spec.Overview) < MinPurposeLength {
+		issues = append(issues, Issue{Level: LevelWarning, Path: "overview", Message: Messages.PurposeTooBrief})
+	}
+	for i, req := range spec.Requirements {
+		if len(req.Text) > MaxRequirementTextLength {
+			issues = append(issues, Issue{Level: LevelInfo, Path: fmt.Sprintf("requirements[%d]", i), Message: Messages.RequirementTooLong})
+		}
+		if len(req.Scenarios) == 0 {
+			issues = append(issues, Issue{Level: LevelWarning, Path: fmt.Sprintf("requirements[%d].scenarios", i), Message: Messages.RequirementNoScenarios + ". " + v.guideScenarioFormat()})
+		}
+	}
+	return issues
+}
+
 func validateChangeSchema(change *schemas.Change) []Issue {
 	var issues []Issue
 	if change.Name == "" {
@@ -390,22 +432,6 @@ func validateChangeSchema(change *schemas.Change) []Issue {
 		}
 		if d.Description == "" {
 			issues = append(issues, Issue{Level: LevelError, Path: fmt.Sprintf("deltas[%d].description", i), Message: Messages.DeltaDescriptionEmpty})
-		}
-	}
-	return issues
-}
-
-func applySpecRules(spec *schemas.Spec) []Issue {
-	var issues []Issue
-	if len(spec.Overview) < MinPurposeLength {
-		issues = append(issues, Issue{Level: LevelWarning, Path: "overview", Message: Messages.PurposeTooBrief})
-	}
-	for i, req := range spec.Requirements {
-		if len(req.Text) > MaxRequirementTextLength {
-			issues = append(issues, Issue{Level: LevelInfo, Path: fmt.Sprintf("requirements[%d]", i), Message: Messages.RequirementTooLong})
-		}
-		if len(req.Scenarios) == 0 {
-			issues = append(issues, Issue{Level: LevelWarning, Path: fmt.Sprintf("requirements[%d].scenarios", i), Message: Messages.RequirementNoScenarios + ". " + Messages.GuideScenarioFormat})
 		}
 	}
 	return issues
@@ -444,13 +470,13 @@ func extractNameFromPath(filePath string) string {
 	return fileName
 }
 
-func enrichTopLevelError(baseMessage string) string {
+func (v *Validator) enrichTopLevelError(baseMessage string) string {
 	msg := strings.TrimSpace(baseMessage)
 	if msg == Messages.ChangeNoDeltas {
 		return msg + ". " + Messages.GuideNoDeltas
 	}
 	if strings.Contains(msg, "spec must have a Purpose section") || strings.Contains(msg, "spec must have a Requirements section") {
-		return msg + ". " + Messages.GuideMissingSpecSections
+		return msg + ". " + v.guideMissingSpecSections()
 	}
 	if strings.Contains(msg, "change must have a Why section") || strings.Contains(msg, "change must have a What Changes section") {
 		return msg + ". " + Messages.GuideMissingChangeSections

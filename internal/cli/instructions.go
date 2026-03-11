@@ -34,6 +34,9 @@ func runInstructions(cmd *cobra.Command, args []string) error {
 
 	projectRoot := "."
 
+	// Read project config once for schema, context, rules, and conditionals
+	cfg := projectconfig.ReadProjectConfig(projectRoot)
+
 	// Resolve schema
 	schemaName := schemaFlag
 	if schemaName == "" {
@@ -46,7 +49,6 @@ func runInstructions(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if schemaName == "" {
-		cfg := projectconfig.ReadProjectConfig(projectRoot)
 		if cfg != nil && cfg.Schema != "" {
 			schemaName = cfg.Schema
 		}
@@ -62,13 +64,17 @@ func runInstructions(cmd *cobra.Command, args []string) error {
 
 	graph := artifactgraph.NewGraphFromSchema(schema)
 
-	// Get project context and rules
+	// Get project context, rules, and conditional keywords
 	var context string
 	var rules map[string][]string
-	cfg := projectconfig.ReadProjectConfig(projectRoot)
+	var conditionals *projectconfig.ConditionalsConfig
 	if cfg != nil {
 		context = cfg.Context
 		rules = cfg.Rules
+		if cfg.Keywords != nil && cfg.Keywords.Conditionals != nil {
+			resolved := projectconfig.ResolveConditionals(cfg.Keywords)
+			conditionals = &resolved
+		}
 	}
 
 	// Special case: "apply"
@@ -79,7 +85,7 @@ func runInstructions(cmd *cobra.Command, args []string) error {
 
 	if artifactID == "apply" {
 		var applyInstruction *artifactgraph.EnrichedInstruction
-		applyInstruction, err = artifactgraph.LoadApplyInstruction(graph, context, rules)
+		applyInstruction, err = artifactgraph.LoadApplyInstruction(graph, context, rules, conditionals)
 		if err != nil {
 			return err
 		}
@@ -103,7 +109,7 @@ func runInstructions(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	instruction, err := artifactgraph.LoadEnrichedInstruction(graph, artifactID, context, rules)
+	instruction, err := artifactgraph.LoadEnrichedInstruction(graph, artifactID, context, rules, conditionals)
 	if err != nil {
 		return err
 	}

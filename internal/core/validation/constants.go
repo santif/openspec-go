@@ -8,6 +8,12 @@ const (
 	MaxWhySectionLength      = 1000
 	MaxRequirementTextLength = 500
 	MaxDeltasPerChange       = 10
+
+	// GuideScenarioFormatTemplate is used with conditional keywords (When, Then, And).
+	GuideScenarioFormatTemplate = "Scenarios must use level-4 headers. Convert bullet lists into:\n#### Scenario: Short name\n- **%s** ...\n- **%s** ...\n- **%s** ..."
+
+	// GuideMissingSpecSectionsTemplate is used with conditional keywords (When, Then).
+	GuideMissingSpecSectionsTemplate = "Missing required sections. Expected headers: \"## Purpose\" and \"## Requirements\". Example:\n## Purpose\n[brief purpose]\n\n## Requirements\n### Requirement: Clear requirement statement\nUsers SHALL ...\n\n#### Scenario: Descriptive name\n- **%s** ...\n- **%s** ..."
 )
 
 var Messages = struct {
@@ -55,7 +61,7 @@ var Messages = struct {
 	DeltaDescriptionTooBrief:   "Delta description is too brief",
 	DeltaMissingRequirements:   "Delta should include requirements",
 	GuideNoDeltas:              `No deltas found. Ensure your change has a specs/ directory with capability folders (e.g. specs/http-server/spec.md) containing .md files that use delta headers (## ADDED/MODIFIED/REMOVED/RENAMED Requirements) and that each requirement includes at least one "#### Scenario:" block. Tip: run "openspec change show <change-id> --json --deltas-only" to inspect parsed deltas.`,
-	GuideMissingSpecSections:   "Missing required sections. Expected headers: \"## Purpose\" and \"## Requirements\". Example:\n## Purpose\n[brief purpose]\n\n## Requirements\n### Requirement: Clear requirement statement\nUsers SHALL ...\n\n#### Scenario: Descriptive name\n- **WHEN** ...\n- **THEN** ...",
+	GuideMissingSpecSections:   fmt.Sprintf(GuideMissingSpecSectionsTemplate, "WHEN", "THEN"),
 	GuideMissingChangeSections: "Missing required sections. Expected headers: \"## Why\" and \"## What Changes\". Ensure deltas are documented in specs/ using delta headers.",
-	GuideScenarioFormat:        "Scenarios must use level-4 headers. Convert bullet lists into:\n#### Scenario: Short name\n- **WHEN** ...\n- **THEN** ...\n- **AND** ...",
+	GuideScenarioFormat:        fmt.Sprintf(GuideScenarioFormatTemplate, "WHEN", "THEN", "AND"),
 }

@@ -15,9 +15,59 @@ var regexMetaChars = regexp.MustCompile(`[.*+?^${}()|[\]\\]`)
 // MaxContextSize is the maximum allowed size for the context field (50KB).
 const MaxContextSize = 50 * 1024
 
+// ConditionalsConfig holds configurable conditional keyword settings.
+type ConditionalsConfig struct {
+	When string `yaml:"when" json:"when"`
+	Then string `yaml:"then" json:"then"`
+	And  string `yaml:"and" json:"and"`
+}
+
+// DefaultConditionals returns the default conditional keywords.
+func DefaultConditionals() ConditionalsConfig {
+	return ConditionalsConfig{When: "WHEN", Then: "THEN", And: "AND"}
+}
+
+// ResolveConditionals returns the effective conditional keywords.
+// If Keywords or Conditionals is nil, returns defaults.
+// Partially configured fields are merged with defaults.
+func ResolveConditionals(kw *KeywordsConfig) ConditionalsConfig {
+	defaults := DefaultConditionals()
+	if kw == nil || kw.Conditionals == nil {
+		return defaults
+	}
+	if kw.Conditionals.When != "" {
+		defaults.When = kw.Conditionals.When
+	}
+	if kw.Conditionals.Then != "" {
+		defaults.Then = kw.Conditionals.Then
+	}
+	if kw.Conditionals.And != "" {
+		defaults.And = kw.Conditionals.And
+	}
+	return defaults
+}
+
+// FormatConditionalsBlock returns a compact instruction block for custom conditional keywords.
+// Empty fields are replaced with defaults so callers never produce malformed output.
+func FormatConditionalsBlock(cond *ConditionalsConfig) string {
+	when, then, and := cond.When, cond.Then, cond.And
+	if when == "" {
+		when = "WHEN"
+	}
+	if then == "" {
+		then = "THEN"
+	}
+	if and == "" {
+		and = "AND"
+	}
+	return fmt.Sprintf("**Project Keywords**: This project uses custom scenario keywords. Use **%s** instead of WHEN, **%s** instead of THEN, and **%s** instead of AND in all scenarios.",
+		when, then, and)
+}
+
 // KeywordsConfig holds configurable keyword settings.
 type KeywordsConfig struct {
-	Normative []string `yaml:"normative" json:"normative"`
+	Normative    []string            `yaml:"normative" json:"normative"`
+	Conditionals *ConditionalsConfig `yaml:"conditionals,omitempty" json:"conditionals,omitempty"`
 }
 
 // ProjectConfig represents the openspec/config.yaml file.
@@ -111,6 +161,19 @@ func ReadProjectConfig(projectRoot string) *ProjectConfig {
 				}
 			}
 		}
+		if cond, ok := kw["conditionals"].(map[string]interface{}); ok {
+			condConfig := &ConditionalsConfig{}
+			if w, ok := cond["when"].(string); ok {
+				condConfig.When = w
+			}
+			if t, ok := cond["then"].(string); ok {
+				condConfig.Then = t
+			}
+			if a, ok := cond["and"].(string); ok {
+				condConfig.And = a
+			}
+			kwConfig.Conditionals = condConfig
+		}
 		config.Keywords = kwConfig
 	}
 
@@ -139,6 +202,20 @@ func ValidateKeywords(kw *KeywordsConfig) []string {
 		}
 		if regexMetaChars.MatchString(keyword) {
 			warnings = append(warnings, fmt.Sprintf("keyword %q contains regex metacharacters; this may cause unexpected behavior", keyword))
+		}
+	}
+	if kw.Conditionals != nil {
+		condFields := map[string]string{
+			"when": kw.Conditionals.When,
+			"then": kw.Conditionals.Then,
+			"and":  kw.Conditionals.And,
+		}
+		for name, value := range condFields {
+			if value == "" {
+				warnings = append(warnings, fmt.Sprintf("keywords.conditionals.%s is empty", name))
+			} else if regexMetaChars.MatchString(value) {
+				warnings = append(warnings, fmt.Sprintf("conditional keyword %q for %q contains regex metacharacters; this may cause unexpected behavior", value, name))
+			}
 		}
 	}
 	return warnings
