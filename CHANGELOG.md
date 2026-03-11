@@ -1,12 +1,12 @@
 # openspec-go
 
-## Unreleased
+## 0.2.0
 
-### Patch Changes
+### Minor Changes
 
-- [`1b48cc1`](https://github.com/santif/openspec-go/commit/1b48cc1cbcdb93b789d380fb05388209c6541d59) test: improve coverage from 90.8% to 91.4% ([#6](https://github.com/santif/openspec-go/pull/6))
+- [`3970612`](https://github.com/santif/openspec-go/commit/3970612) feat: add configurable conditional keywords (WHEN/THEN/AND) to project config ([#10](https://github.com/santif/openspec-go/pull/10))
 
-- [`8ff0c79`](https://github.com/santif/openspec-go/commit/8ff0c793829fb2897fe4b4887dac57f57ed76a5c) docs: add normative keywords example to README project config ([#7](https://github.com/santif/openspec-go/pull/7))
+  Added support for configuring conditional keywords (WHEN, THEN, AND) in project config alongside the existing normative keywords. Validators now respect project-level conditional keyword overrides, allowing teams to customize which conditional keywords are required in spec scenarios.
 
 ## 0.1.2
 
@@ -22,15 +22,9 @@
 
   Fixed installer script to use POSIX-compatible `sed` syntax and gracefully handle systems where `sudo` is not available.
 
-- [`63d6745`](https://github.com/santif/openspec-go/commit/63d6745fb5ec1c111578a29885c22aab1fd60467) test: improve test coverage across core packages ([#5](https://github.com/santif/openspec-go/pull/5))
-
 ## 0.1.1
 
 ### Patch Changes
-
-- [`8908bf3`](https://github.com/santif/openspec-go/commit/8908bf306a4ea4d9ecf061c83c67e09fb7cfa6c6) test: increase overall test coverage from 76% to 88.8% ([#1](https://github.com/santif/openspec-go/pull/1))
-
-- [`daf012d`](https://github.com/santif/openspec-go/commit/daf012dad5512cb2ea8532153a6c077a9ebf17e9) ci: add Codecov integration and README badges ([#2](https://github.com/santif/openspec-go/pull/2))
 
 - [`f5c281c`](https://github.com/santif/openspec-go/commit/f5c281c2e85027e1b42e43452e2d19298682f41a) fix: show correct version when installed via `go install` ([#3](https://github.com/santif/openspec-go/pull/3))
 
@@ -64,18 +58,3 @@
 
   Added support for configuring normative keywords (SHALL, MUST, etc.) in project config. Validators now respect project-level keyword overrides, allowing teams to customize which keywords are required in spec requirements and scenarios.
 
-- [`de2bc91`](https://github.com/santif/openspec-go/commit/de2bc9108543e6809b8b602f13955186dbd4d0bc) ci: add GitHub Actions CI/CD and golangci-lint config
-
-  Set up CI pipeline with Go test, vet, lint, and GoReleaser for automated releases on tags. Includes Codecov integration for tracking test coverage.
-
-### Patch Changes
-
-- [`99f4ab8`](https://github.com/santif/openspec-go/commit/99f4ab8027668050b58b873009176501d4c1823e) fix: convert 14 spec files from delta format to proper spec format
-
-  Corrected embedded spec files that were incorrectly using delta format (ADDED/MODIFIED sections) instead of the standard spec format with Purpose and Requirements sections.
-
-- [`4b2095d`](https://github.com/santif/openspec-go/commit/4b2095d3eb6acdfdd2636eddbbc03b8ce2e7829b) docs: add project README
-
-  Initial README with project overview, installation instructions, quick start guide, CLI reference, and architecture documentation.
-
-- [`c8beac8`](https://github.com/santif/openspec-go/commit/c8beac8a20a293ef22260a384ca23efbd47411b7) docs: update CLAUDE.md to reflect current project state

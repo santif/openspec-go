@@ -1,8 +1,6 @@
 ## Purpose
 Adapter-based system that generates skill and command markdown files for multiple AI tools, dispatching to per-tool adapters via a registry and supporting configurable delivery modes, workflow mapping, and tool detection.
-
 ## Requirements
-
 ### Requirement: Tool adapter system
 The system SHALL maintain a registry of tool adapters, one per supported AI tool. Each adapter SHALL implement the `ToolCommandAdapter` interface providing `GetToolID()`, `GenerateSkills()`, `GenerateCommands()`, and `GetSkillsDir()`. The registry MUST support lookup by tool ID.
 
@@ -15,7 +13,7 @@ The system SHALL maintain a registry of tool adapters, one per supported AI tool
 - **THEN** the registry returns nil or an error indicating no adapter found
 
 ### Requirement: Skill file generation
-The system SHALL generate skill directory and files per workflow for a given AI tool. Each skill file SHALL contain the workflow-specific instruction content formatted for the target tool.
+The system SHALL generate skill directory and files per workflow for a given AI tool. Each skill file SHALL contain the workflow-specific instruction content formatted for the target tool. When the project has custom conditional keywords configured, the system SHALL append a compact "Project Keywords" instruction block to the skill content instructing the AI to use the configured keywords instead of WHEN/THEN/AND.
 
 #### Scenario: Generate skills for Claude Code
 - **WHEN** `GenerateSkills()` is called on the Claude adapter with workflows [propose, explore, apply, archive]
@@ -25,12 +23,24 @@ The system SHALL generate skill directory and files per workflow for a given AI 
 - **WHEN** skill files are generated for Cursor
 - **THEN** the files use Cursor-specific format (YAML frontmatter with appropriate fields)
 
+#### Scenario: Generate skills with custom conditional keywords
+- **WHEN** skill files are generated and the project config has `keywords: { conditionals: { when: "CUANDO", then: "ENTONCES", and: "Y" } }`
+- **THEN** each generated skill file includes a "Project Keywords" block instructing the AI to use CUANDO/ENTONCES/Y
+
+#### Scenario: Generate skills without custom conditional keywords
+- **WHEN** skill files are generated and the project config has no conditionals configured
+- **THEN** skill files are generated without any "Project Keywords" block (unchanged behavior)
+
 ### Requirement: Command file generation
-The system SHALL generate command files per workflow for a given AI tool. Command files provide an alternative delivery mechanism for tools that support custom commands.
+The system SHALL generate command files per workflow for a given AI tool. Command files provide an alternative delivery mechanism for tools that support custom commands. When the project has custom conditional keywords configured, the system SHALL append the same "Project Keywords" instruction block to command file content.
 
 #### Scenario: Generate commands for a tool
 - **WHEN** `GenerateCommands()` is called with workflows [propose, apply]
 - **THEN** two command files are generated in the tool's command directory
+
+#### Scenario: Generate commands with custom conditional keywords
+- **WHEN** command files are generated and the project config has custom conditionals configured
+- **THEN** each generated command file includes a "Project Keywords" block
 
 ### Requirement: Delivery modes
 The system SHALL support three delivery modes: skills-only, commands-only, and both. The default delivery mode SHALL be "both". The delivery mode SHALL be read from global config and determines which file types are generated.
@@ -82,3 +92,4 @@ The system SHALL provide specialized adapters for 7 AI tools (Claude, Cursor, Co
 #### Scenario: Generic adapter for unsupported tool
 - **WHEN** skill files are generated for a tool without a specialized adapter
 - **THEN** the generic BaseAdapter is used to produce standard-format skill files
+
