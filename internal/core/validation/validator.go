@@ -437,7 +437,6 @@ func validateChangeSchema(change *schemas.Change) []Issue {
 	return issues
 }
 
-
 func applyChangeRules(change *schemas.Change) []Issue {
 	var issues []Issue
 	const minDeltaDescriptionLength = 10

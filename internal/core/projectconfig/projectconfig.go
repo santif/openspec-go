@@ -47,6 +47,23 @@ func ResolveConditionals(kw *KeywordsConfig) ConditionalsConfig {
 	return defaults
 }
 
+// FormatConditionalsBlock returns a compact instruction block for custom conditional keywords.
+// Empty fields are replaced with defaults so callers never produce malformed output.
+func FormatConditionalsBlock(cond *ConditionalsConfig) string {
+	when, then, and := cond.When, cond.Then, cond.And
+	if when == "" {
+		when = "WHEN"
+	}
+	if then == "" {
+		then = "THEN"
+	}
+	if and == "" {
+		and = "AND"
+	}
+	return fmt.Sprintf("**Project Keywords**: This project uses custom scenario keywords. Use **%s** instead of WHEN, **%s** instead of THEN, and **%s** instead of AND in all scenarios.",
+		when, then, and)
+}
+
 // KeywordsConfig holds configurable keyword settings.
 type KeywordsConfig struct {
 	Normative    []string            `yaml:"normative" json:"normative"`

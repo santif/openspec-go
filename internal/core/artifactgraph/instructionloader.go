@@ -47,8 +47,7 @@ func LoadEnrichedInstruction(graph *ArtifactGraph, artifactID string, context st
 
 	// Conditional keywords instruction
 	if conditionals != nil {
-		parts = append(parts, fmt.Sprintf("**Project Keywords**: This project uses custom scenario keywords. Use **%s** instead of WHEN, **%s** instead of THEN, and **%s** instead of AND in all scenarios.",
-			conditionals.When, conditionals.Then, conditionals.And))
+		parts = append(parts, projectconfig.FormatConditionalsBlock(conditionals))
 	}
 
 	return &EnrichedInstruction{
@@ -87,8 +86,7 @@ func LoadApplyInstruction(graph *ArtifactGraph, context string, rules map[string
 	}
 
 	if conditionals != nil {
-		parts = append(parts, fmt.Sprintf("**Project Keywords**: This project uses custom scenario keywords. Use **%s** instead of WHEN, **%s** instead of THEN, and **%s** instead of AND in all scenarios.",
-			conditionals.When, conditionals.Then, conditionals.And))
+		parts = append(parts, projectconfig.FormatConditionalsBlock(conditionals))
 	}
 
 	return &EnrichedInstruction{

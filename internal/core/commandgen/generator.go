@@ -40,6 +40,5 @@ func GenerateForTool(toolID string, workflows []string, delivery globalconfig.De
 
 // conditionalsInstructionBlock returns a compact instruction block for custom conditional keywords.
 func conditionalsInstructionBlock(cond *projectconfig.ConditionalsConfig) string {
-	return fmt.Sprintf("**Project Keywords**: This project uses custom scenario keywords. Use **%s** instead of WHEN, **%s** instead of THEN, and **%s** instead of AND in all scenarios.",
-		cond.When, cond.Then, cond.And)
+	return projectconfig.FormatConditionalsBlock(cond)
 }

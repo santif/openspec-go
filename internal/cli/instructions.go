@@ -34,6 +34,9 @@ func runInstructions(cmd *cobra.Command, args []string) error {
 
 	projectRoot := "."
 
+	// Read project config once for schema, context, rules, and conditionals
+	cfg := projectconfig.ReadProjectConfig(projectRoot)
+
 	// Resolve schema
 	schemaName := schemaFlag
 	if schemaName == "" {
@@ -46,7 +49,6 @@ func runInstructions(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if schemaName == "" {
-		cfg := projectconfig.ReadProjectConfig(projectRoot)
 		if cfg != nil && cfg.Schema != "" {
 			schemaName = cfg.Schema
 		}
@@ -66,7 +68,6 @@ func runInstructions(cmd *cobra.Command, args []string) error {
 	var context string
 	var rules map[string][]string
 	var conditionals *projectconfig.ConditionalsConfig
-	cfg := projectconfig.ReadProjectConfig(projectRoot)
 	if cfg != nil {
 		context = cfg.Context
 		rules = cfg.Rules

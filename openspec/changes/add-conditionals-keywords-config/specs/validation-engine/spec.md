@@ -43,5 +43,5 @@ The system SHALL support creating a validator with custom normative keywords and
 - **THEN** the validator checks for DEBE or DEBERA in requirement text and uses CUANDO/ENTONCES/Y in guide messages
 
 #### Scenario: Validator with nil keywords falls back to defaults
-- **WHEN** `NewValidatorWithKeywords(false, nil)` is called with nil conditionals
+- **WHEN** `NewValidatorWithKeywords(false, nil, nil)` is called with nil conditionals
 - **THEN** the validator checks for SHALL or MUST and uses WHEN/THEN/AND in guide messages
