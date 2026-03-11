@@ -4,11 +4,11 @@
 The system SHALL store per-project configuration in a YAML file at `openspec/config.yaml`. The file SHALL support the following fields: schema (string), profile (string), workflows (list of strings), context (string), rules (map of artifact ID to arrays of rule strings), and keywords (object with normative list of strings and conditionals object with named keys: when, then, and).
 
 #### Scenario: Parse a complete config file
-- **WHEN** `Load()` is called on a config.yaml with all fields populated including `keywords.normative` and `keywords.conditionals`
+- **WHEN** `ReadProjectConfig()` is called on a config.yaml with all fields populated including `keywords.normative` and `keywords.conditionals`
 - **THEN** the returned ProjectConfig has schema, profile, workflows, context, rules, and keywords correctly set including conditionals with when, then, and and values
 
 #### Scenario: Parse a minimal config file
-- **WHEN** `Load()` is called on a config.yaml with only `schema: spec-driven`
+- **WHEN** `ReadProjectConfig()` is called on a config.yaml with only `schema: spec-driven`
 - **THEN** the returned ProjectConfig has schema="spec-driven" with defaults for all other fields, keywords is nil
 
 #### Scenario: Parse config with custom normative keywords
@@ -57,7 +57,7 @@ The system SHALL validate the `keywords.normative` field when present. Each keyw
 ## ADDED Requirements
 
 ### Requirement: Conditionals config defaults
-The system SHALL provide a method to resolve effective conditional keywords. When `Keywords.Conditionals` is nil, the effective values SHALL be the defaults: When="WHEN", Then="THEN", And="AND". When `Keywords.Conditionals` is set, the configured values SHALL be used as-is (empty strings are not replaced with defaults).
+The system SHALL provide a method to resolve effective conditional keywords. When `Keywords.Conditionals` is nil, the effective values SHALL be the defaults: When="WHEN", Then="THEN", And="AND". When `Keywords.Conditionals` is set, partially configured fields SHALL be merged with defaults (empty strings are replaced with default values).
 
 #### Scenario: Resolve defaults when conditionals not configured
 - **WHEN** `Keywords` is nil and `ResolveConditionals()` is called
@@ -66,3 +66,7 @@ The system SHALL provide a method to resolve effective conditional keywords. Whe
 #### Scenario: Resolve configured conditionals
 - **WHEN** `Keywords.Conditionals` is set with When="CUANDO", Then="ENTONCES", And="Y"
 - **THEN** `ResolveConditionals()` returns the configured values
+
+#### Scenario: Resolve partially configured conditionals
+- **WHEN** `Keywords.Conditionals` is set with only When="CUANDO" (Then and And are empty)
+- **THEN** `ResolveConditionals()` returns When="CUANDO", Then="THEN", And="AND" (empty fields merged with defaults)
