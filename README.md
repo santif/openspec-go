@@ -1,7 +1,7 @@
 # OpenSpec
 
 [![CI](https://github.com/santif/openspec-go/actions/workflows/ci.yml/badge.svg)](https://github.com/santif/openspec-go/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/santif/9fd59b6fc015a2c756284d76a66a2d54/raw/coverage.json)](https://github.com/santif/openspec-go/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2Fsantif%2F9fd59b6fc015a2c756284d76a66a2d54%2Fraw%2Fcoverage.json)](https://github.com/santif/openspec-go/actions/workflows/ci.yml)
 [![Go 1.26+](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![Go Reference](https://pkg.go.dev/badge/github.com/santif/openspec-go.svg)](https://pkg.go.dev/github.com/santif/openspec-go)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
