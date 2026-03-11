@@ -28,7 +28,7 @@ The system SHALL store per-project configuration in a YAML file at `openspec/con
 - **THEN** the returned ProjectConfig has Keywords.Conditionals with When="CUANDO", Then="" and And=""
 
 ### Requirement: Keywords validation
-The system SHALL validate the `keywords.normative` field when present. Each keyword MUST be a non-empty string. The system SHALL reject keywords that contain regex metacharacters to prevent regex injection. The system SHALL warn when the keywords list is present but empty. The system SHALL validate `keywords.conditionals` when present: each named key (when, then, and) MUST be a non-empty string if the conditionals object is provided.
+The system SHALL validate the `keywords.normative` field when present. Each keyword MUST be a non-empty string. The system SHALL warn when a keyword contains regex metacharacters to prevent regex injection. The system SHALL warn when the keywords list is present but empty (validator will fall back to defaults). The system SHALL validate `keywords.conditionals` when present: the system SHALL warn when a named key (when, then, or and) is empty, and SHALL warn when a named key contains regex metacharacters.
 
 #### Scenario: Valid custom keywords
 - **WHEN** config.yaml has `keywords: { normative: ["DEBE", "DEBERA"] }`
