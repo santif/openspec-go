@@ -1,4 +1,4 @@
-# OpenSpec
+# OpenSpec-Go
 
 [![CI](https://github.com/santif/openspec-go/actions/workflows/ci.yml/badge.svg)](https://github.com/santif/openspec-go/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2Fsantif%2F9fd59b6fc015a2c756284d76a66a2d54%2Fraw%2Fcoverage.json)](https://github.com/santif/openspec-go/actions/workflows/ci.yml)
